@@ -10,6 +10,7 @@ private:
     SymbolInfo *next;
 
 public:
+    SymbolInfo() {}
     SymbolInfo(string symbolName, string sybolType, SymbolInfo *next)
     {
         this->symbolName = symbolName;
