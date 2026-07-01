@@ -51,11 +51,10 @@ public:
         SymbolInfo* head = hashTable[hashBucket];
 
         while(head != NULL && head->getNext() != NULL)
-        {
             head = head->getNext();
-        }
 
         head->setNext(symbol);
+
         return true;
     }
 
