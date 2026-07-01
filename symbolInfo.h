@@ -1,5 +1,6 @@
 #pragma once
 #include <string>
+#include <cstdio>
 
 using namespace std;
 
@@ -7,16 +8,17 @@ class SymbolInfo
 {
 private:
     string symbolName, symbolType;
-    SymbolInfo *next = NULL;
+    SymbolInfo *next = nullptr;
 
 public:
     SymbolInfo() {}
-    SymbolInfo(string symbolName, string symbolType, SymbolInfo *next)
+    SymbolInfo(string symbolName, string symbolType)
     {
         this->symbolName = symbolName;
         this->symbolType = symbolType;
-        this->next = next;
     }
+
+    void print() { cerr<<"{ " + symbolName + ", " + symbolType + "} "  }
 
     void setSymbolName(string symbolNmae)
     {
