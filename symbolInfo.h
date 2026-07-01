@@ -7,14 +7,14 @@ class SymbolInfo
 {
 private:
     string symbolName, symbolType;
-    SymbolInfo *next;
+    SymbolInfo *next = NULL;
 
 public:
     SymbolInfo() {}
-    SymbolInfo(string symbolName, string sybolType, SymbolInfo *next)
+    SymbolInfo(string symbolName, string symbolType, SymbolInfo *next)
     {
         this->symbolName = symbolName;
-        this->symbolType = sybolType;
+        this->symbolType = symbolType;
         this->next = next;
     }
 
