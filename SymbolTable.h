@@ -65,11 +65,12 @@ public:
     void printAllScopeTables()
     {
         ScopeTable *head = currentScopeTable;
-
+        string spacing = "";
         while (head != nullptr)
         {
-            head->print();
+            head->print(spacing);
             head = head->getParentScope();
+            spacing += "    ";
         }
     }
 };

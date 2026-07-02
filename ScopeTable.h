@@ -138,13 +138,13 @@ public:
         return true;
     }
 
-    void print()
+    void print(string spacing = "")
     {
         cerr<<"ScopeTable# " << unique_id << "\n";
         for(int i =0; i < bucketNumber; ++i)
         {
             SymbolInfo* head = hashTable[i];
-            cout << i + 1 << "--> ";
+            cout << spacing <<  i + 1 << "--> ";
             while(head != nullptr)
             {
                 head->print();
