@@ -14,47 +14,47 @@ string formatSymbolType(string rest)
     symbolType.reserve(250);
     /*
         GENERATES A FORMAT LIKE THIS:
-        FUNCTION, RETURN_TYPE <==(argument1_type, argument2_type, ..., arguementN_type)
+        FUNCTION,RETURN_TYPE<==(argument1_type,argument2_type,...,arguementN_type)
         FROM THIS:
         FUNCTION INT INT FLOAT INT
     */
     if (token == "FUNCTION")
     {
-        symbolType += ", ";
+        symbolType += ",";
         ss >> token;
-        symbolType += token + " <==(";
+        symbolType += token + "<==(";
 
         if(ss >> token)
             symbolType += token;
         
         while (ss >> token)
         {
-            symbolType += ", " + token;
+            symbolType += "," + token;
         }
 
         symbolType += ")";
     }
     /*
         GENERATES A FORMAT LIKE THIS:
-        STRUCT, {(INT, a), (FLOAT, b)}
+        STRUCT,{(INT,a),(FLOAT,b)}
         FROM THIS:
         foo STRUCT INT a FLOAT b
     */
     else if (token == "STRUCT" || token == "UNION")
     {
-        symbolType += ", ";
+        symbolType += ",";
         symbolType += "{";
 
         if(ss >> token)
         {
-            symbolType += "(" + token + ", ";
+            symbolType += "(" + token + ",";
             ss >> token;
             symbolType += token + ")";
         }
 
         while(ss >> token)
         {
-            symbolType += ", (" + token + ", ";
+            symbolType += ",(" + token + ",";
             ss >> token;
             symbolType += token + ")";
         }

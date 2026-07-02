@@ -8,7 +8,7 @@ class SymbolTable
 {
 private:
     ScopeTable *currentScopeTable = nullptr;
-
+    int counter = 0;
 public:
     void enterScope()
     {
@@ -50,6 +50,7 @@ public:
             head = head->getParentScope();
         }
 
+        cout << "'" << symbolName << "' not found in any of the ScopeTables\n";
         return nullptr;
     }
 
