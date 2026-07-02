@@ -76,12 +76,12 @@ int main(int argc, char **argv)
 
     freopen(argv[1], "r", stdin);
     freopen(argv[2], "w", stdout);
-    
+
     int n, i = 1;
     cin >> n;
     cin.ignore(numeric_limits<streamsize>::max(), '\n');
 
-    SymbolTable *symbolTable = new SymbolTable();
+    SymbolTable *symbolTable = new SymbolTable(n);
     string inputLine, token;
     bool flag = true;
 

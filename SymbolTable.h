@@ -10,6 +10,16 @@ private:
     ScopeTable *currentScopeTable = nullptr;
     int counter = 0;
 public:
+    SymbolTable(int n)
+    {
+        currentScopeTable = new ScopeTable(n);
+    }
+
+    ~SymbolTable()
+    {
+        delete currentScopeTable;
+    }
+
     void enterScope()
     {
         ScopeTable *prevScopeTable = currentScopeTable;
