@@ -88,7 +88,6 @@ int main(int argc, char **argv)
     while (getline(cin, inputLine) && flag)
     {
         cout << "Cmd " << i++ << ": " << inputLine << '\n';
-cerr<<'i'<<endl;
         stringstream ss = stringstream(inputLine);
         if (ss >> token)
         {
@@ -98,9 +97,7 @@ cerr<<'i'<<endl;
                 ss >> symbolName;
                 getline(ss, inputLine);
                 symbolType = formatSymbolType(inputLine);
-cerr<<'a'<<endl;
                 symbolTable->insertSymbol(symbolName, symbolType);
-cerr<<'b'<<endl;
             }
             else if (token == "L")
             {

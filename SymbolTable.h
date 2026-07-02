@@ -9,21 +9,29 @@ class SymbolTable
 private:
     ScopeTable *currentScopeTable = nullptr;
     int counter = 0;
+    int bucketNumber;
 public:
     SymbolTable(int n)
     {
-        currentScopeTable = new ScopeTable(n);
+        bucketNumber = n;
+        currentScopeTable = new ScopeTable(bucketNumber);
     }
 
     ~SymbolTable()
     {
-        delete currentScopeTable;
+        ScopeTable *head = currentScopeTable;
+        while (head != nullptr)
+        {
+            ScopeTable *temp = head;
+            head = head->getParentScope();
+            delete temp;
+        }
     }
 
     void enterScope()
     {
         ScopeTable *prevScopeTable = currentScopeTable;
-        currentScopeTable = new ScopeTable(prevScopeTable->getBucketNumber());
+        currentScopeTable = new ScopeTable(bucketNumber);
         currentScopeTable->setParentScope(prevScopeTable);
     }
 

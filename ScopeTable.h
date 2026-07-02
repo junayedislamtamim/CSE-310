@@ -20,7 +20,8 @@ private:
 public:
     ScopeTable(int n)
     {
-        hashTable = new SymbolInfo*[n];
+        bucketNumber = n;
+        hashTable = new SymbolInfo*[bucketNumber];
         cout << "ScopeTable# " << unique_id << " created\n";
     }
     
@@ -58,10 +59,9 @@ public:
 
     SymbolInfo* lookUpSymbol(string symbolName)
     {
-        int i = 1;
+        int i = 0;
         int hashBucket = SDBMHash(symbolName);
         SymbolInfo* head = hashTable[hashBucket];
-
         while(head != nullptr && head->getSymbolName() != symbolName)
         {
             head = head->getNext();
@@ -74,13 +74,12 @@ public:
 
     bool insertSymbol(string symbolName, string symbolType)
     {
-        int i = 1;
+        int i = 0;
         if(symbolName.empty() || this->lookUpSymbol(symbolName) != nullptr)
         {
             cout<<"Insertion Failed :" << (symbolName.empty() ? "Empty SymbolName" : "SymbolName already exists") <<"\n";
             return false;
         }
-
         cout<<"Inserted in ScopeTable# "<<unique_id<<" at position ";
         int hashBucket = SDBMHash(symbolName);
         SymbolInfo* head = hashTable[hashBucket];
@@ -109,7 +108,7 @@ public:
         }
 
         int hashBucket = SDBMHash(symbolName);
-        int i = 1;
+        int i = 0;
         SymbolInfo* head = hashTable[hashBucket];
         SymbolInfo* next = head->getNext(); // since symbol already exists head wont be null
         
@@ -140,7 +139,7 @@ public:
 
     void print(string spacing = "")
     {
-        cerr<<"ScopeTable# " << unique_id << "\n";
+        cout<<"ScopeTable# " << unique_id << "\n";
         for(int i =0; i < bucketNumber; ++i)
         {
             SymbolInfo* head = hashTable[i];
