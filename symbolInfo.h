@@ -20,7 +20,7 @@ public:
         this->symbolType = symbolType;
     }
 
-    void print() { cerr<<"{ " + symbolName + ", " + symbolType + "} "  }
+    void print() { cerr<<"<" + symbolName + "," + symbolType + "> "  }
 
     void setSymbolName(string symbolNmae)
     {
