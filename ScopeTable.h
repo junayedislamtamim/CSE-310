@@ -1,4 +1,6 @@
-#pragma once
+#ifndef SCOPE_TABLE
+#define SCOPE_TABLE 
+
 #include <string>
 #include <cstdio>
 #include <iostream>
@@ -132,3 +134,5 @@ public:
 
     ScopeTable* getParentScope() { return parentScope; }
 };
+
+#endif

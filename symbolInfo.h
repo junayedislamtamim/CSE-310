@@ -1,4 +1,6 @@
-#pragma once
+#ifndef SYMBOL_INFO
+#define SYMBOL_INFO
+
 #include <string>
 #include <cstdio>
 
@@ -39,3 +41,5 @@ public:
     string getSymbolType() { return symbolType; }
     SymbolInfo* getNext() { return next; }
 };
+
+#endif
