@@ -1,1 +1,2 @@
+ScopeTable# 1 created
 Cmd 1: I foo FUNCTION INT INT FLOAT INT
