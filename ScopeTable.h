@@ -64,7 +64,7 @@ public:
         return head;
     }
 
-    bool insertSymbol(string symbolName, string symbolType, SymbolInfo* next)
+    bool insertSymbol(string symbolName, string symbolType)
     { 
         if(symbolName.empty() || this->lookUpSymbol(symbolName) != nullptr)
             return false;
@@ -83,7 +83,7 @@ public:
         return true; 
     }
 
-    bool deleteSymbol(string symbolName)
+    bool deleteSymbol(string symbolName, string symbolType = "")
     {
         if(symbolName.empty() || this->lookUpSymbol(symbolName) == nullptr)
             return false;
@@ -133,6 +133,7 @@ public:
     }
 
     ScopeTable* getParentScope() { return parentScope; }
+    int getBucketNumber() { return bucketNumber; }
 };
 
 #endif
