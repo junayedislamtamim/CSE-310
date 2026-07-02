@@ -6,7 +6,7 @@ Cmd 2: I i VAR
 Cmd 3: L i
    'i' found in ScopeTable# 1 at position 1, 1
 Cmd 4: L i j
-   'i' found in ScopeTable# 1 at position 1, 1
+   Number of parameters mismatch for the command L
 Cmd 5: L j
    'j' not found in any of the ScopeTables
 Cmd 6: S
@@ -129,14 +129,14 @@ Cmd 26: P A
           7--> <foo,FUNCTION,INT<==(INT,FLOAT,INT)> 
 Cmd 27: D ==
    '==' found in ScopeTable# 5 at position 2, 1
-   Deleted '==' from ScopeTable# 5 at position 2, 0
+   Deleted '==' from ScopeTable# 5 at position 2, 1
 Cmd 28: I foo VAR
    'foo' found in ScopeTable# 5 at position 7, 2
     Insertion Failed :SymbolName already exists
 Cmd 29: D 23
    Not found in the current ScopeTable
 Cmd 30: D
-   Not found in the current ScopeTable
+   Number of parameters mismatch for the command D
 Cmd 31: P A
   ScopeTable# 5
   1--> 

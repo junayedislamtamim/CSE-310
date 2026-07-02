@@ -13,7 +13,7 @@ string formatSymbolType(string rest)
     ss >> token;
     symbolType += token;
     symbolType.reserve(250);
-    
+
     /*
         GENERATES A FORMAT LIKE THIS:
         FUNCTION,RETURN_TYPE<==(argument1_type,argument2_type,...,arguementN_type)
@@ -83,10 +83,9 @@ int main(int argc, char **argv)
     cin.ignore(numeric_limits<streamsize>::max(), '\n');
 
     SymbolTable *symbolTable = new SymbolTable(n);
-    string inputLine, token;
-    bool flag = true;
+    string inputLine, token, extra;
 
-    while (getline(cin, inputLine) && flag)
+    while (getline(cin, inputLine))
     {
         cout << "Cmd " << i++ << ": " << inputLine << '\n';
         stringstream ss = stringstream(inputLine);
@@ -98,39 +97,63 @@ int main(int argc, char **argv)
                 ss >> symbolName;
                 getline(ss, inputLine);
                 symbolType = formatSymbolType(inputLine);
-                symbolTable->insertSymbol(symbolName, symbolType);
+                if(!symbolName.empty() && !symbolType.empty())
+                    symbolTable->insertSymbol(symbolName, symbolType);
+                else
+                    cout << "   " << "Number of parameters mismatch for the command I\n";
             }
             else if (token == "L")
             {
                 ss >> symbolName;
-                symbolTable->lookUp(symbolName);
+                if(!(ss >> extra) && !symbolName.empty())
+                    symbolTable->lookUp(symbolName);
+                else
+                    cout << "   " << "Number of parameters mismatch for the command L\n";
             }
             else if (token == "D")
             {
                 ss >> symbolName;
-                symbolTable->deleteSymbol(symbolName);
+                if(!(ss >> extra) && !symbolName.empty())
+                    symbolTable->deleteSymbol(symbolName);
+                else
+                    cout << "   " << "Number of parameters mismatch for the command D\n";
             }
             else if (token == "P")
             {
                 ss >> token;
-                if (token == "C")
-                    symbolTable->printCurrentScopeTable();
-                else if (token == "A")
-                    symbolTable->printAllScopeTables();
+                if(!(ss >> extra) && !token.empty())
+                {
+                    if (token == "C")
+                        symbolTable->printCurrentScopeTable();
+                    else if (token == "A")
+                        symbolTable->printAllScopeTables();
+                }
+                else 
+                    cout << "   " << "Number of parameters mismatch for the command P\n";
             }
             else if (token == "S")
             {
-                symbolTable->enterScope();
+                if(!(ss >> extra))
+                    symbolTable->enterScope();
+                else
+                    cout << "   " << "Number of parameters mismatch for the command S\n";
             }
             else if (token == "E")
             {
-                symbolTable->exitScope();
+                if(!(ss >> extra))
+                    symbolTable->exitScope();
+                else
+                   cout << "   " << "Number of parameters mismatch for the command E\n"; 
             }
             else if (token == "Q")
             {
-                delete symbolTable;
-                flag = false;
-                break;
+                if(!( ss >> extra))
+                {
+                    delete symbolTable;
+                    break;
+                }
+                else
+                    cout << "   " << "Number of parameters mismatch for the command Q\n";
             }
         }
     }

@@ -22,7 +22,7 @@ public:
 
     void print() { cout << "<" + symbolName + "," + symbolType + "> ";  }
 
-    void setSymbolName(string symbolNmae)
+    void setSymbolName(string symbolName)
     {
         this->symbolName = symbolName;
     }

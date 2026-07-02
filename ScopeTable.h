@@ -13,15 +13,15 @@ int unique_id_counter = 1;
 class ScopeTable
 {
 private:
-    ScopeTable* parentScope;
-    SymbolInfo** hashTable;
+    ScopeTable* parentScope = nullptr;
+    SymbolInfo** hashTable = nullptr;
     const int unique_id = unique_id_counter++;
     int bucketNumber;
 public:
     ScopeTable(int n)
     {
         bucketNumber = n;
-        hashTable = new SymbolInfo*[bucketNumber];
+        hashTable = new SymbolInfo*[bucketNumber]{};
         cout << "   " << "ScopeTable# " << unique_id << " created\n";
     }
     
@@ -33,8 +33,8 @@ public:
             while(head != nullptr)
             {
                 SymbolInfo* prev = head;
-                delete prev;
                 head = head->getNext();
+                delete prev;
             }
         }
 
@@ -112,7 +112,7 @@ public:
         }
 
         int hashBucket = SDBMHash(symbolName);
-        int i = 0;
+        int i = 1;
         SymbolInfo* head = hashTable[hashBucket];
         SymbolInfo* next = head->getNext(); // since symbol already exists head wont be null
         
