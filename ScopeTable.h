@@ -39,7 +39,7 @@ public:
 
         delete[] hashTable;
 
-        cout << "ScopeTable# " << unique_id << " \n";
+        cout << "ScopeTable# " << unique_id << " removed\n";
     }
 
     unsigned int SDBMHash(string str)
@@ -140,20 +140,19 @@ public:
 
     void print()
     {
-        cerr<<"Printing scope table:  \n";
+        cerr<<"ScopeTable# " << unique_id << "\n";
         for(int i =0; i < bucketNumber; ++i)
         {
             SymbolInfo* head = hashTable[i];
+            cout << i + 1 << "--> ";
             while(head != nullptr)
             {
                 head->print();
                 head = head->getNext();
             }
             
-            cerr<<endl;
+            cout << '\n';
         }
-
-        cerr<<endl;
     }
 
     void setParentScope(ScopeTable* parentScope)
