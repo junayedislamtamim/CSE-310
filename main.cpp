@@ -1,6 +1,7 @@
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <limits>
 #include "SymbolTable.h"
 
 using namespace std;
@@ -67,16 +68,18 @@ string formatSymbolType(string rest)
 
 int main(int argc, char **argv)
 {
-    // if(argc != 3)
-    // {
-    //     cerr<<"Wrong command line arguements\n"<<"Enter in the following format:\n<program> <inputfile> <outputfile>\n";
-    //     return 1;
-    // }
+    if(argc != 3)
+    {
+        cerr<<"Wrong command line arguements\n"<<"Enter in the following format:\n<program> <inputfile> <outputfile>\n";
+        return 1;
+    }
 
-    // freopen(argv[1], "r", stdin);
-    // freopen(argv[2], "w", stdout);
+    freopen(argv[1], "r", stdin);
+    freopen(argv[2], "w", stdout);
+    
     int n, i = 1;
     cin >> n;
+    cin.ignore(numeric_limits<streamsize>::max(), '\n');
 
     SymbolTable *symbolTable = new SymbolTable();
     string inputLine, token;
@@ -84,7 +87,8 @@ int main(int argc, char **argv)
 
     while (getline(cin, inputLine) && flag)
     {
-        cout << "Cmd " << i << ": " << inputLine << '\n';
+        cout << "Cmd " << i++ << ": " << inputLine << '\n';
+cerr<<'i'<<endl;
         stringstream ss = stringstream(inputLine);
         if (ss >> token)
         {
@@ -94,7 +98,9 @@ int main(int argc, char **argv)
                 ss >> symbolName;
                 getline(ss, inputLine);
                 symbolType = formatSymbolType(inputLine);
+cerr<<'a'<<endl;
                 symbolTable->insertSymbol(symbolName, symbolType);
+cerr<<'b'<<endl;
             }
             else if (token == "L")
             {

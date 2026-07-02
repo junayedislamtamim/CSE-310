@@ -20,7 +20,7 @@ public:
         this->symbolType = symbolType;
     }
 
-    void print() { cout<<"<" + symbolName + "," + symbolType + "> "  }
+    void print() { cout<<"<" + symbolName + "," + symbolType + "> ";  }
 
     void setSymbolName(string symbolNmae)
     {
