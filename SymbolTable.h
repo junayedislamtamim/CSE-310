@@ -2,7 +2,7 @@
 #define SYMBOL_TABLE
 
 #include <string>
-#include <ScopeTable.h>
+#include "ScopeTable.h"
 
 class SymbolTable
 {
