@@ -109,13 +109,23 @@ public:
         }
 
         int hashBucket = SDBMHash(symbolName);
+        int i = 1;
         SymbolInfo* head = hashTable[hashBucket];
         SymbolInfo* next = head->getNext(); // since symbol already exists head wont be null
+        
+        if(head->getSymbolName() == symbolName)
+        {
+            hashTable[hashBucket] = next;
+            delete head;
+            cout << "Deleted " << "'" << symbolName << "' from ScopeTable# " << unique_id << " at position " << hashBucket + 1 << ", " << i << '\n';
+            return true;
+        }
 
         while(next != nullptr && next->getSymbolName() != symbolName)
         {
             head = head->getNext();
             next = next->getNext();
+            ++i;
         }
 
         if(next != nullptr)
@@ -123,9 +133,8 @@ public:
             head->setNext(next->getNext());
             delete next;
         }
-        else
-            delete head;
-        
+
+        cout << "Deleted " << "'" << symbolName << "' from ScopeTable# " << unique_id << " at position " << hashBucket + 1 << ", " << i + 1 << '\n';
         return true;
     }
 

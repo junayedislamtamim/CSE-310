@@ -75,7 +75,7 @@ int main(int argc, char **argv)
 
     // freopen(argv[1], "r", stdin);
     // freopen(argv[2], "w", stdout);
-    int n;
+    int n, i = 1;
     cin >> n;
 
     SymbolTable *symbolTable = new SymbolTable();
@@ -84,8 +84,9 @@ int main(int argc, char **argv)
 
     while (getline(cin, inputLine) && flag)
     {
+        cout << "Cmd " << i << ": " << inputLine << '\n';
         stringstream ss = stringstream(inputLine);
-        while (ss >> token)
+        if (ss >> token)
         {
             string symbolName, symbolType;
             if (token == "I")
@@ -123,6 +124,7 @@ int main(int argc, char **argv)
             }
             else if (token == "Q")
             {
+                delete symbolTable;
                 flag = false;
                 break;
             }
