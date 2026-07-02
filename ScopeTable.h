@@ -22,7 +22,7 @@ public:
     {
         bucketNumber = n;
         hashTable = new SymbolInfo*[bucketNumber];
-        cout << "ScopeTable# " << unique_id << " created\n";
+        cout << "   " << "ScopeTable# " << unique_id << " created\n";
     }
     
     ~ScopeTable()
@@ -40,7 +40,7 @@ public:
 
         delete[] hashTable;
 
-        cout << "ScopeTable# " << unique_id << " removed\n";
+        cout << "   " << "ScopeTable# " << unique_id << " removed\n";
     }
 
     unsigned int SDBMHash(string str)
@@ -59,7 +59,7 @@ public:
 
     SymbolInfo* lookUpSymbol(string symbolName)
     {
-        int i = 0;
+        int i = 1;
         int hashBucket = SDBMHash(symbolName);
         SymbolInfo* head = hashTable[hashBucket];
         while(head != nullptr && head->getSymbolName() != symbolName)
@@ -68,19 +68,19 @@ public:
             ++i;
         }
         
-        if(head != nullptr) cout << "'" << symbolName << "' found in ScopeTable# " << unique_id << " at position " << hashBucket + 1 << ", " << i << '\n'; 
+        if(head != nullptr) cout << "   " << "'" << symbolName << "' found in ScopeTable# " << unique_id << " at position " << hashBucket + 1 << ", " << i << '\n'; 
         return head;
     }
 
     bool insertSymbol(string symbolName, string symbolType)
     {
-        int i = 0;
+        int i = 1;
         if(symbolName.empty() || this->lookUpSymbol(symbolName) != nullptr)
         {
-            cout<<"Insertion Failed :" << (symbolName.empty() ? "Empty SymbolName" : "SymbolName already exists") <<"\n";
+            cout<< "    " << "Insertion Failed :" << (symbolName.empty() ? "Empty SymbolName" : "SymbolName already exists") <<"\n";
             return false;
         }
-        cout<<"Inserted in ScopeTable# "<<unique_id<<" at position ";
+        cout << "   " << "Inserted in ScopeTable# "<<unique_id<<" at position ";
         int hashBucket = SDBMHash(symbolName);
         SymbolInfo* head = hashTable[hashBucket];
 
@@ -90,12 +90,16 @@ public:
             ++i;
         }
 
+        cout << hashBucket + 1 << ", " << (head == nullptr ? i : i + 1) << "\n";
+
         if(head == nullptr)
+        {
             head = new SymbolInfo(symbolName, symbolType);
+            hashTable[hashBucket] = head;
+        }
         else
             head->setNext(new SymbolInfo(symbolName, symbolType));
         
-        cout << hashBucket + 1 << ", " << (head == nullptr ? i : i + 1) << "\n";
         return true; 
     }
 
@@ -103,7 +107,7 @@ public:
     {
         if(symbolName.empty() || this->lookUpSymbol(symbolName) == nullptr)
         {
-            cout << "Not found in the current ScopeTable\n";
+            cout << "   " << "Not found in the current ScopeTable\n";
             return false;
         }
 
@@ -116,7 +120,7 @@ public:
         {
             hashTable[hashBucket] = next;
             delete head;
-            cout << "Deleted " << "'" << symbolName << "' from ScopeTable# " << unique_id << " at position " << hashBucket + 1 << ", " << i << '\n';
+            cout << "   " << "Deleted " << "'" << symbolName << "' from ScopeTable# " << unique_id << " at position " << hashBucket + 1 << ", " << i << '\n';
             return true;
         }
 
@@ -133,13 +137,13 @@ public:
             delete next;
         }
 
-        cout << "Deleted " << "'" << symbolName << "' from ScopeTable# " << unique_id << " at position " << hashBucket + 1 << ", " << i + 1 << '\n';
+        cout << "   " <<  "Deleted " << "'" << symbolName << "' from ScopeTable# " << unique_id << " at position " << hashBucket + 1 << ", " << i + 1 << '\n';
         return true;
     }
 
-    void print(string spacing = "")
+    void print(string spacing = "   ")
     {
-        cout<<"ScopeTable# " << unique_id << "\n";
+        cout << spacing << "ScopeTable# " << unique_id << "\n";
         for(int i =0; i < bucketNumber; ++i)
         {
             SymbolInfo* head = hashTable[i];

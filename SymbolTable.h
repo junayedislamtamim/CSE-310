@@ -68,7 +68,7 @@ public:
             head = head->getParentScope();
         }
 
-        cout << "'" << symbolName << "' not found in any of the ScopeTables\n";
+        cout << "   " << "'" << symbolName << "' not found in any of the ScopeTables\n";
         return nullptr;
     }
 
@@ -83,7 +83,7 @@ public:
     void printAllScopeTables()
     {
         ScopeTable *head = currentScopeTable;
-        string spacing = "";
+        string spacing = "  ";
         while (head != nullptr)
         {
             head->print(spacing);

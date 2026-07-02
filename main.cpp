@@ -11,8 +11,9 @@ string formatSymbolType(string rest)
     stringstream ss(rest);
     string token, symbolType;
     ss >> token;
-
+    symbolType += token;
     symbolType.reserve(250);
+    
     /*
         GENERATES A FORMAT LIKE THIS:
         FUNCTION,RETURN_TYPE<==(argument1_type,argument2_type,...,arguementN_type)

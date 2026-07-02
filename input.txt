@@ -1,7 +1,7 @@
 7
 I foo FUNCTION INT INT FLOAT INT
 I i VAR
-L
+L i
 L i j
 L j
 S
@@ -43,7 +43,6 @@ S
 I true BOOL
 L a
 P A
-E
 E
 E
 E
