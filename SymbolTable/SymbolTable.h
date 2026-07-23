@@ -55,20 +55,20 @@ public:
         return currentScopeTable->deleteSymbol(symbolName, symbolType);
     }
 
-    SymbolInfo *lookUp(string symbolName)
+    SymbolInfo *lookUp(string symbolName, bool silent = false)
     {
         ScopeTable *head = currentScopeTable;
 
         while (head != nullptr)
         {
-            SymbolInfo *symbol = head->lookUpSymbol(symbolName);
+            SymbolInfo *symbol = head->lookUpSymbol(symbolName, silent);
             if (symbol != nullptr)
                 return symbol;
 
             head = head->getParentScope();
         }
 
-        cout << "   " << "'" << symbolName << "' not found in any of the ScopeTables\n";
+        if(!silent) cout << "   " << "'" << symbolName << "' not found in any of the ScopeTables\n";
         return nullptr;
     }
 

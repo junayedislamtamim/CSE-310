@@ -57,7 +57,7 @@ public:
         return hash;
     }
 
-    SymbolInfo* lookUpSymbol(string symbolName)
+    SymbolInfo* lookUpSymbol(string symbolName, bool silent = false)
     {
         int i = 1;
         int hashBucket = SDBMHash(symbolName);
@@ -68,14 +68,14 @@ public:
             ++i;
         }
         
-        if(head != nullptr) cout << "   " << "'" << symbolName << "' found in ScopeTable# " << unique_id << " at position " << hashBucket + 1 << ", " << i << '\n'; 
+        if(head != nullptr && !silent) cout << "   " << "'" << symbolName << "' found in ScopeTable# " << unique_id << " at position " << hashBucket + 1 << ", " << i << '\n'; 
         return head;
     }
 
     bool insertSymbol(string symbolName, string symbolType)
     {
         int i = 1;
-        if(symbolName.empty() || this->lookUpSymbol(symbolName) != nullptr)
+        if(symbolName.empty() || this->lookUpSymbol(symbolName, true) != nullptr)
         {
             cout<< "    " << "Insertion Failed :" << (symbolName.empty() ? "Empty SymbolName" : "SymbolName already exists") <<"\n";
             return false;
@@ -105,7 +105,7 @@ public:
 
     bool deleteSymbol(string symbolName, string symbolType = "")
     {
-        if(symbolName.empty() || this->lookUpSymbol(symbolName) == nullptr)
+        if(symbolName.empty() || this->lookUpSymbol(symbolName, true) == nullptr)
         {
             cout << "   " << "Not found in the current ScopeTable\n";
             return false;
