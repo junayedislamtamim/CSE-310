@@ -45,17 +45,17 @@ public:
         delete temp;
     }
 
-    bool insertSymbol(string symbolName, string symbolType)
+    bool insertSymbol(const string&  symbolName, string symbolType)
     {
         return currentScopeTable->insertSymbol(symbolName, symbolType);
     }
 
-    bool deleteSymbol(string symbolName, string symbolType = "")
+    bool deleteSymbol(const string&  symbolName, string symbolType = "")
     {
         return currentScopeTable->deleteSymbol(symbolName, symbolType);
     }
 
-    SymbolInfo *lookUp(string symbolName, bool silent = false)
+    SymbolInfo *lookUp(const string&  symbolName, bool silent = false)
     {
         ScopeTable *head = currentScopeTable;
 

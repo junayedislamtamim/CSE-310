@@ -6,7 +6,7 @@
 
 using namespace std;
 
-string formatSymbolType(string rest)
+string formatSymbolType(const string&  rest)
 {
     stringstream ss(rest);
     string token, symbolType;

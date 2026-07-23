@@ -14,7 +14,7 @@ private:
 
 public:
     SymbolInfo() {}
-    SymbolInfo(string symbolName, string symbolType)
+    SymbolInfo(const string&  symbolName, string symbolType)
     {
         this->symbolName = symbolName;
         this->symbolType = symbolType;
@@ -22,12 +22,12 @@ public:
 
     void print() { cout << "<" + symbolName + "," + symbolType + "> ";  }
 
-    void setSymbolName(string symbolName)
+    void setSymbolName(const string&  symbolName)
     {
         this->symbolName = symbolName;
     }
 
-    void setSymbolType(string symbolType)
+    void setSymbolType(const string&  symbolType)
     {
         this->symbolType = symbolType;
     }

@@ -43,7 +43,7 @@ public:
         cout << "   " << "ScopeTable# " << unique_id << " removed\n";
     }
 
-    unsigned int SDBMHash(string str)
+    unsigned int SDBMHash(const string&  str)
     {
         unsigned int hash = 0;
         unsigned int i = 0;
@@ -57,7 +57,7 @@ public:
         return hash;
     }
 
-    SymbolInfo* lookUpSymbol(string symbolName, bool silent = false)
+    SymbolInfo* lookUpSymbol(const string&  symbolName, bool silent = false)
     {
         int i = 1;
         int hashBucket = SDBMHash(symbolName);
@@ -72,7 +72,7 @@ public:
         return head;
     }
 
-    bool insertSymbol(string symbolName, string symbolType)
+    bool insertSymbol(const string&  symbolName, string symbolType)
     {
         int i = 1;
         if(symbolName.empty() || this->lookUpSymbol(symbolName, true) != nullptr)
@@ -103,7 +103,7 @@ public:
         return true; 
     }
 
-    bool deleteSymbol(string symbolName, string symbolType = "")
+    bool deleteSymbol(const string&  symbolName, string symbolType = "")
     {
         if(symbolName.empty() || this->lookUpSymbol(symbolName, true) == nullptr)
         {
@@ -141,7 +141,7 @@ public:
         return true;
     }
 
-    void print(string spacing = "   ")
+    void print(const string&  spacing = "   ")
     {
         cout << spacing << "ScopeTable# " << unique_id << "\n";
         for(int i =0; i < bucketNumber; ++i)
