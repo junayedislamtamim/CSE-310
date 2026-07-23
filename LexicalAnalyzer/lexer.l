@@ -11,6 +11,7 @@
     using namespace std;
 
     int lineNo = 1;
+    int errorCount = 0;
     ofstream logF;
     ofstream outF;
     ifstream inputFile;
@@ -31,19 +32,118 @@
     };
 
     void populateKeyword(SymbolTable* keywordTable);
+    bool isKeyword(const string& str);
+    void log(int lineNo, const string& token, const string& lexeme);
 %}
 
 %option c++
 %option noyywrap
 
+%x STRING 
+%x CHAR
+
 DIGIT [0-9]
 LETTER [a-zA-Z]
+ESC_CHAR \[nt\'afrbv0]
  
     /*RULE SECTION*/
 %%
 
-({LETTER}|_)({LETTER}|{DIGIT}|_)* {
-    /*Rule for ID*/
+<INITIAL>({LETTER}|_)({LETTER}|{DIGIT}|_)* {
+    /*Rule for ID and KEYWORD*/
+    string token;
+    if(isKeyword(yytext))
+    {
+        string type = keywordTable->lookUp(yytext, true)->getSymbolType();
+        token = "<" + type + ">";
+    }
+    else
+    {
+        token =  "<ID, " + string(yytext) + ">\n"; 
+    }
+
+    outF << token << ' ';
+    log(lineNo, token, yytext);
+}
+
+<INITIAL>{DIGIT}*.{DIGIT}+(E?[+-]?{DIGIT}+)? {
+    /*Rule for floating point number*/
+    string token = "<CONST_FLOAT, " + string(yytext) + ">";
+    outF << token << ' ';
+    log(lineNo, token, yytext);
+}
+
+<INITIAL>'[^']'? {
+    /*Rule for const chars*/
+    char ch;
+    if(yyleng == 1)
+    {
+        logF << "Line No. " << lineNo << " Stray '\n";
+        ++errorCount;
+        return;
+    }
+    if(yyleng == 2 && yytext[1] == '\'')
+    {
+        logF << "Line No. " << lineNo << " Empty character constant\n";
+        ++errorCount;
+        return;
+    }
+    if(yytext[1] != '\\' && yyleng != 3)
+    {
+        if(yyleng > 3)
+        {
+            logF << "Line No. " << lineNo << " Multi character constant error. Lexeme: '" << string(yytext) << '\n';
+        }
+        else
+        {
+            logF << "Line No. " << lineNo << " Unfinished character: '" << yytext << '\n';
+        }
+
+        ++errorCount;
+        return;
+    }
+
+    if(yytext[1] == '\\' && yyleng != 4)
+    {
+        if(yyleng > 4)
+        {
+            logF << "Line No. " << lineNo << " Multi character constant error. Lexeme: '" << string(yytext) << '\n';
+        }
+        else
+        {
+            logF << "Line No. " << lineNo << " Unfinished character: '" << yytext << '\n';
+        }
+
+        ++errorCount;
+        return;
+    }
+
+    if(yytext[1] == '\\')
+    {
+        switch(yytext[2])
+        {
+            case 'n': ch = (unsigned int)'\n'; break;
+            case 't': ch = (unsigned int)'\t'; break;
+            case '\\': ch = (unsigned int)'\\'; break;
+            case '\'': ch = (unsigned int)'\''; break;
+            case 'a': ch = (unsigned int)'\a'; break;
+            case 'f': ch = (unsigned int)'\f'; break;
+            case 'r': ch = (unsigned int)'\r'; break;
+            case 'b': ch = (unsigned int)'\b'; break;
+            case 'v': ch = (unsigned int)'\v'; break;
+            case '0': ch = (unsigned int)'\0'; break;
+            default:
+                logF << "Line No. " << lineNo << " Unrecognized character " << string(yytext) << '\n';
+                ++errorCount;
+                return;
+        }
+    }
+    else  
+        ch = yytext[1];
+    
+    string token = string("<CONST_CHAR, ") + ch + ">";
+    outF << token << ' ';
+    log(lineNo, token, yytext);
 }
 
 \n {lineNo++;}
@@ -87,4 +187,14 @@ void populateKeyword(SymbolTable* keywordTable)
     {
         keywordTable->insertSymbol(keyword[i].name, keyword[i].token);
     }
+}
+
+bool isKeyword(SymbolTable* keywordTable, const string& str)
+{
+    return keywordTable->lookUp(str, true);
+}
+
+void log(int lineNo, const string& token, const string& lexeme)
+{
+    logF << "Line No. " << lineNo << ": Token "  << " Lexeme "  << lexeme << " found.\n";
 }
