@@ -71,29 +71,6 @@ ESC_CHAR \[nt\'afrbv0]
     log(lineNo, token, yytext);
 }
 
-    // <INITIAL>{DIGIT}*\. {
-    //     /*Rule for floating point number*/
-    //     yymore();
-    //     BEGIN(FLOAT);
-    // }
-
-    // <FLOAT>{DIGIT}+((E[+-]?)?{DIGIT}+)? {
-    //     string token = "<CONST_FLOAT, " + string(yytext) + ">";
-    //     outF << token << ' ';
-    //     log(lineNo, token, yytext);
-    //     BEGIN(INITIAL);
-    // }
-
-    // <FLOAT>({DIGIT}|\.)+((E[+-]?)?{DIGIT}+)* {
-    //     ++errorCount;
-    //     logF << "Too many decimal points " << string(yytext) << '\n';
-    //     BEGIN(INITIAL);
-    // }
-
-    // <INITIAL>{DIGIT}*E+({DIGIT}|E)*\.({DIGIT}|E)* {
-    //     logF << "Ill formed number " << string(yytext) << '\n';
-    // }
-
 <INITIAL>({DIGIT}|{LETTER}|[+-])*\.({DIGIT}|{LETTER}|[+-])* {
     int dots = 0;
     int e = 0;
