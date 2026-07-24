@@ -45,6 +45,8 @@
 %option noyywrap
 
 %x STRING 
+%x SLCOMM
+%x MLCOMM
 
 DIGIT [0-9]
 LETTER [a-zA-Z]
@@ -227,6 +229,27 @@ PAREN [(){}\[\],;]
     outF << token << ' ';
     BEGIN(INITIAL);
 }
+
+<INITIAL>"//" {
+    yymore();
+    BEGIN(SLCOMM);
+}
+
+<SLCOMM>\\\n {
+    yymore();
+    ++lineNo;
+}
+
+<SLCOMM>[^\n] {
+    yymore();
+}
+
+<SLCOMM>\n {
+    string token = "COMMENT";
+    log(lineNo, token, yytext);
+    BEGIN(INITIAL);
+}
+
 
 \n {lineNo++;}
 <INITIAL>[ \t] {/*does nothing*/}
