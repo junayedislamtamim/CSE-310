@@ -57,7 +57,7 @@ PAREN [(){}\[\],;]
  
     /*RULE SECTION*/
 %%
-<INITIAL>{DIGIT}+{LETTER}+ {
+<INITIAL>{DIGIT}+({LETTER}|_)+ {
     logF << "Invalid prefix on identifier " << string(yytext) << '\n';
 }
 
@@ -85,7 +85,7 @@ PAREN [(){}\[\],;]
     log(lineNo, token, yytext);
 }
 
-<INITIAL>({DIGIT}|{LETTER}|[+-])*\.({DIGIT}|{LETTER}|[+-])* {
+<INITIAL>({DIGIT}|{LETTER}|[+-])*\.({DIGIT}|{LETTER}|[.+-])* {
     /*RULE for FLOATS*/
     int dots = 0;
     int e = 0;
@@ -142,7 +142,7 @@ PAREN [(){}\[\],;]
     {
         logF << "Line No. " << lineNo << " stray '\n";
         ++errorCount;
-        return 0;
+        goto done;
     }
     ++i;
 
@@ -164,7 +164,7 @@ PAREN [(){}\[\],;]
             default:
                 logF << "Line No. " << lineNo << " Unrecognized character " << string(yytext) << '\n';
                 ++errorCount;
-                return 0;
+                goto done;
         }
         ++i;
     }
@@ -178,14 +178,14 @@ PAREN [(){}\[\],;]
     {
         logF << "Line No. " << lineNo << " Unfinished character " << string(yytext) << '\n';
         ++errorCount;
-        return 0;
+        goto done;
     }
 
     if(i < n && str[i] != '\'')
     {
         logF << "Line No. " << lineNo << " Multicharacter error " << string(yytext) << '\n';
         ++errorCount;
-        return 0;
+        goto done;
     }
 
     if(i < n && str[i] == '\'')
@@ -194,6 +194,8 @@ PAREN [(){}\[\],;]
         log(lineNo, token, yytext);
         outF << token <<' ';
     }
+
+    done:
 }
 
 <INITIAL>{OP} {
@@ -233,6 +235,10 @@ PAREN [(){}\[\],;]
 }
 
 <STRING>[^\"] {
+    yymore();
+}
+
+<STRING>\\\" {
     yymore();
 }
 
