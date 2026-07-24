@@ -296,6 +296,7 @@ PAREN [(){}\[\],;]
 
 \n {lineNo++;}
 <INITIAL>[ \t] {/*does nothing*/}
+. {/*does nothing*/}
 
 %%
     /*SUBROUTINES*/
