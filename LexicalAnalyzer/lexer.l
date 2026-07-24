@@ -250,6 +250,29 @@ PAREN [(){}\[\],;]
     BEGIN(INITIAL);
 }
 
+<INITIAL>"/*" {
+    yymore();
+    BEGIN(MLCOMM);
+}
+
+<MLCOMM>\n {
+    lineNo++;
+    yymore();
+}
+
+<MLCOMM>. {
+    yymore();
+}
+
+<MLCOMM>"*/" {
+    log(lineNo, "COMMENT", yytext);
+    BEGIN(INITIAL);
+}
+
+<MLCOMM><<EOF>> {
+    logF << "Line No. " << lineNo << " Unfinished comment.\n";
+    yyterminate();
+}
 
 \n {lineNo++;}
 <INITIAL>[ \t] {/*does nothing*/}
