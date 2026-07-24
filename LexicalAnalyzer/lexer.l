@@ -38,6 +38,7 @@
     bool isFloat(const string& str);
     string getParenType(const string& str);
     string getOPType(const string& str);
+    string processString(const string& str);
 %}
 
 %option c++
@@ -78,7 +79,7 @@ PAREN [(){}\[\],;]
     string token = string("<CONST_INT, ") + yytext + ">";
 
     outF << token << ' ';
-    logF(lineNo, token, yytext);
+    log(lineNo, token, yytext);
 }
 
 <INITIAL>({DIGIT}|{LETTER}|[+-])*\.({DIGIT}|{LETTER}|[+-])* {
@@ -184,7 +185,7 @@ PAREN [(){}\[\],;]
 
     string token = string("<") + type + ", " + yytext + ">";
     outF << token << ' ';
-    logF(lineNo, token, yytext);
+    log(lineNo, token, yytext);
 }
 
 <INITIAL>{PAREN} {
@@ -192,7 +193,39 @@ PAREN [(){}\[\],;]
 
     string token = string("<") + type + ", " + yytext + ">";
     outF << token << ' ';
-    logF(lineNo, token, yytext);
+    log(lineNo, token, yytext);
+}
+
+<INITIAL>\" {
+    yymore();
+    BEGIN(STRING);
+}
+
+<STRING>\\\n {
+    lineNo++;
+    yymore();
+}
+
+<STRING>\n {
+    lineNo++;
+    logF << "Line No. " << lineNo << " Unfinished string.\n";
+    BEGIN(INITIAL);
+}
+
+<STRING>{ESC_CHAR} {
+    yymore();
+}
+
+<STRING>[^\"] {
+    yymore();
+}
+
+<STRING>\" {
+    string str = processString(yytext);
+    string token = string("<STRING, ") + str + ">";
+    log(lineNo, token, str);
+    outF << token << ' ';
+    BEGIN(INITIAL);
 }
 
 \n {lineNo++;}
@@ -334,4 +367,42 @@ string getOPType(const string& str)
         return "NOT";
 
     return "UNKNOWN OPERATION";    
+}
+
+string processString(const string& str)
+{
+    string type = "";
+
+    //exclude the beginning and closing \"s
+    for(int i =1; i < str.size() - 1; ++i)
+    {
+        if(str[i] != '\\')
+            type += str[i];
+        else
+        {
+            ++i;
+
+            if(i < str.size())
+            {
+                switch(str[i])
+                {
+                    case 'n': type += (unsigned char)'\n'; break;
+                    case 't': type += (unsigned char)'\t'; break;
+                    case '\\': type += (unsigned char)'\\'; break;
+                    case '\'': type += (unsigned char)'\''; break;
+                    case 'a': type += (unsigned char)'\a'; break;
+                    case 'f': type += (unsigned char)'\f'; break;
+                    case 'r': type += (unsigned char)'\r'; break;
+                    case 'b': type += (unsigned char)'\b'; break;
+                    case 'v': type += (unsigned char)'\v'; break;
+                    case '0': type += (unsigned char)'\0'; break;
+                    case '"': type += (unsigned char) '\"'; break;
+                    case '\n': break; //this is the valid \\\n case not the \n one
+                    default: type += string("\\") + str[i];
+                }
+            }
+        }
+    }
+
+    return type;
 }
