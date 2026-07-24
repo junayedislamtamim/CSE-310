@@ -36,17 +36,20 @@
     bool isKeyword(const string& str);
     void log(int lineNo, const string& token, const string& lexeme);
     bool isFloat(const string& str);
+    string getParenType(const string& str);
+    string getOPType(const string& str);
 %}
 
 %option c++
 %option noyywrap
 
 %x STRING 
-%x FLOAT
 
 DIGIT [0-9]
 LETTER [a-zA-Z]
 ESC_CHAR \[nt\'afrbv0]
+OP ([+-*/%<>=]|"++"|"--"|"<="|">="|"=="|"!="|"&&"|"||")
+PAREN [(){}\[\],;]
  
     /*RULE SECTION*/
 %%
@@ -71,7 +74,15 @@ ESC_CHAR \[nt\'afrbv0]
     log(lineNo, token, yytext);
 }
 
+<INITIAL>{DIGIT}+ {
+    string token = string("<CONST_INT, ") + yytext + ">";
+
+    outF << token << ' ';
+    logF(lineNo, token, yytext);
+}
+
 <INITIAL>({DIGIT}|{LETTER}|[+-])*\.({DIGIT}|{LETTER}|[+-])* {
+    /*RULE for FLOATS*/
     int dots = 0;
     int e = 0;
 
@@ -168,6 +179,22 @@ ESC_CHAR \[nt\'afrbv0]
     log(lineNo, token, yytext);
 }
 
+<INITIAL>{OP} {
+    string type = getOPType(yytext);
+
+    string token = string("<") + type + ", " + yytext + ">";
+    outF << token << ' ';
+    logF(lineNo, token, yytext);
+}
+
+<INITIAL>{PAREN} {
+    string type = getParenType(yytext);
+
+    string token = string("<") + type + ", " + yytext + ">";
+    outF << token << ' ';
+    logF(lineNo, token, yytext);
+}
+
 \n {lineNo++;}
 <INITIAL>[ \t] {/*does nothing*/}
 
@@ -249,4 +276,62 @@ bool isFloat(const string& str)
     }
 
     return i == n;
+}
+
+string getParenType(const string& str)
+{
+    char ch = str[0];
+
+    switch(ch)
+    {
+        case '(' : return "LPAREN"; 
+        case ')' : return "RPAREN";
+        case '{' : return "LCURL";
+        case '}' : return "RCURL";
+        case '[' : return "LTHIRD";
+        case ']' : return "RTHIRD";
+        case ',' : return "COMMA";
+        case ';' : return "SEMICOLON";
+        default : return "UNKNOWN PARENTHESES";
+    }
+}
+
+string getOPType(const string& str)
+{
+    if(str == "+")
+        return "ADDOP";
+    if(str == "-")
+        return "ADDOP";
+    if(str == "*")
+        return "MULOP";
+    if(str == "/")
+        return "MULOP";
+    if(str == "%")
+        return "MULOP";
+    if(str == "++")
+        return "INCOP";
+    if(str == "--")
+        return "INCOP";
+    if(str == "<")
+        return "RELOP";
+    if(str == "<=")
+        return "RELOP";
+    if(str == ">")
+        return "RELOP";
+    if(str == ">=")
+        return "RELOP";
+    if(str == "==")
+        return "RELOP";
+    if(str == "!=")
+        return "RELOP";
+    if(str == "=")
+        return "ASSIGNOP";
+    if(str == "&&")
+        return "LOGICOP";
+    if(str == "||")
+        return "LOGICOP";
+    if(str == "!")
+        return "NOT";
+
+    return "UNKNOWN OPERATION";    
 }
