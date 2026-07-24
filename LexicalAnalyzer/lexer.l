@@ -313,6 +313,8 @@ int main(int argc,char** argv)
 
     logF.close();
     outF.close();
+    inputFile.close();
+    delete keywordTable;
 
     return 0;
 }
