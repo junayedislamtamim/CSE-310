@@ -11,16 +11,17 @@ class SymbolInfo
 private:
     string symbolName, symbolType;
     SymbolInfo *next = nullptr;
-
+    bool silent = false;
 public:
     SymbolInfo() {}
-    SymbolInfo(const string&  symbolName, string symbolType)
+    SymbolInfo(const string&  symbolName, string symbolType, bool silent = false)
     {
         this->symbolName = symbolName;
         this->symbolType = symbolType;
+        this->silent = silent;
     }
 
-    void print() { cout << "<" + symbolName + "," + symbolType + "> ";  }
+    void print() { if(!silent) cout << "<" + symbolName + "," + symbolType + "> ";  }
 
     void setSymbolName(const string&  symbolName)
     {

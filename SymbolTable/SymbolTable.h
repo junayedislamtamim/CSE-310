@@ -10,11 +10,13 @@ private:
     ScopeTable *currentScopeTable = nullptr;
     int counter = 0;
     int bucketNumber;
+    bool silent = false;
 public:
-    SymbolTable(int n)
+    SymbolTable(int n, bool silent = false)
     {
         bucketNumber = n;
-        currentScopeTable = new ScopeTable(bucketNumber);
+        currentScopeTable = new ScopeTable(bucketNumber, silent);
+        this->silent = silent;
     }
 
     ~SymbolTable()
@@ -31,7 +33,7 @@ public:
     void enterScope()
     {
         ScopeTable *prevScopeTable = currentScopeTable;
-        currentScopeTable = new ScopeTable(bucketNumber);
+        currentScopeTable = new ScopeTable(bucketNumber, silent);
         currentScopeTable->setParentScope(prevScopeTable);
     }
 
@@ -55,13 +57,13 @@ public:
         return currentScopeTable->deleteSymbol(symbolName, symbolType);
     }
 
-    SymbolInfo *lookUp(const string&  symbolName, bool silent = false)
+    SymbolInfo *lookUp(const string&  symbolName)
     {
         ScopeTable *head = currentScopeTable;
 
         while (head != nullptr)
         {
-            SymbolInfo *symbol = head->lookUpSymbol(symbolName, silent);
+            SymbolInfo *symbol = head->lookUpSymbol(symbolName);
             if (symbol != nullptr)
                 return symbol;
 
