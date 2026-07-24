@@ -285,7 +285,7 @@ int main(int argc,char** argv)
         return 0;
     
     logF.open(logFile);
-    outF.open(logFile);
+    outF.open(tokenFile);
     inputFile.open(argv[1]);
     
     if(!logF.is_open() || !outF.is_open() || !inputFile.is_open())
