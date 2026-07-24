@@ -3,6 +3,7 @@
     #include <fstream>
     #include <FlexLexer.h>
     #include <string>
+    #include <cctype>
     #include "./SymbolTable/SymbolTable.h"
 
     #define KEYWORD_COUNT 21
@@ -34,13 +35,14 @@
     void populateKeyword(SymbolTable* keywordTable);
     bool isKeyword(const string& str);
     void log(int lineNo, const string& token, const string& lexeme);
+    bool isFloat(const string& str);
 %}
 
 %option c++
 %option noyywrap
 
 %x STRING 
-%x CHAR
+%x FLOAT
 
 DIGIT [0-9]
 LETTER [a-zA-Z]
@@ -48,6 +50,9 @@ ESC_CHAR \[nt\'afrbv0]
  
     /*RULE SECTION*/
 %%
+<INITIAL>{DIGIT}+{LETTER}+ {
+    logF << "Invalid prefix on identifier " << string(yytext) << '\n';
+}
 
 <INITIAL>({LETTER}|_)({LETTER}|{DIGIT}|_)* {
     /*Rule for ID and KEYWORD*/
@@ -66,11 +71,51 @@ ESC_CHAR \[nt\'afrbv0]
     log(lineNo, token, yytext);
 }
 
-<INITIAL>{DIGIT}*.{DIGIT}+(E?[+-]?{DIGIT}+)? {
-    /*Rule for floating point number*/
-    string token = "<CONST_FLOAT, " + string(yytext) + ">";
-    outF << token << ' ';
-    log(lineNo, token, yytext);
+    // <INITIAL>{DIGIT}*\. {
+    //     /*Rule for floating point number*/
+    //     yymore();
+    //     BEGIN(FLOAT);
+    // }
+
+    // <FLOAT>{DIGIT}+((E[+-]?)?{DIGIT}+)? {
+    //     string token = "<CONST_FLOAT, " + string(yytext) + ">";
+    //     outF << token << ' ';
+    //     log(lineNo, token, yytext);
+    //     BEGIN(INITIAL);
+    // }
+
+    // <FLOAT>({DIGIT}|\.)+((E[+-]?)?{DIGIT}+)* {
+    //     ++errorCount;
+    //     logF << "Too many decimal points " << string(yytext) << '\n';
+    //     BEGIN(INITIAL);
+    // }
+
+    // <INITIAL>{DIGIT}*E+({DIGIT}|E)*\.({DIGIT}|E)* {
+    //     logF << "Ill formed number " << string(yytext) << '\n';
+    // }
+
+<INITIAL>({DIGIT}|{LETTER}|[+-])*\.({DIGIT}|{LETTER}|[+-])* {
+    int dots = 0;
+    int e = 0;
+
+    for (const auto& ch: yytext) 
+    {
+        if(ch == '.')
+            dots++;
+        else if(ch == 'E')
+            e++;
+    }
+
+    if(dots > 1)
+        logF << "Line No. " << lineNo << " Too many dots. " << '\n';
+    else if(!isFloat(yytext))
+        logF << "Line No. " << lineNo << " Ill formed floating point number" << '\n';
+    else
+    {
+        string token = string("<CONST_FLOAT, ") + yytext + ">";
+        log(lineNo, token, yytext);
+        outF << token << ' ';
+    }
 }
 
 <INITIAL>'[^']'? {
@@ -122,16 +167,16 @@ ESC_CHAR \[nt\'afrbv0]
     {
         switch(yytext[2])
         {
-            case 'n': ch = (unsigned int)'\n'; break;
-            case 't': ch = (unsigned int)'\t'; break;
-            case '\\': ch = (unsigned int)'\\'; break;
-            case '\'': ch = (unsigned int)'\''; break;
-            case 'a': ch = (unsigned int)'\a'; break;
-            case 'f': ch = (unsigned int)'\f'; break;
-            case 'r': ch = (unsigned int)'\r'; break;
-            case 'b': ch = (unsigned int)'\b'; break;
-            case 'v': ch = (unsigned int)'\v'; break;
-            case '0': ch = (unsigned int)'\0'; break;
+            case 'n': ch = (unsigned char)'\n'; break;
+            case 't': ch = (unsigned char)'\t'; break;
+            case '\\': ch = (unsigned char)'\\'; break;
+            case '\'': ch = (unsigned char)'\''; break;
+            case 'a': ch = (unsigned char)'\a'; break;
+            case 'f': ch = (unsigned char)'\f'; break;
+            case 'r': ch = (unsigned char)'\r'; break;
+            case 'b': ch = (unsigned char)'\b'; break;
+            case 'v': ch = (unsigned char)'\v'; break;
+            case '0': ch = (unsigned char)'\0'; break;
             default:
                 logF << "Line No. " << lineNo << " Unrecognized character " << string(yytext) << '\n';
                 ++errorCount;
@@ -196,5 +241,35 @@ bool isKeyword(SymbolTable* keywordTable, const string& str)
 
 void log(int lineNo, const string& token, const string& lexeme)
 {
-    logF << "Line No. " << lineNo << ": Token "  << " Lexeme "  << lexeme << " found.\n";
+    logF << "Line No. " << lineNo << ": Token "  << token <<  " Lexeme "  << lexeme << " found.\n";
+}
+
+bool isFloat(const string& str) 
+{
+    //FLOAT = ({DIGIT})*\.({DIGIT})+(E[+-]?{DIGIT}+)? 
+
+    int i = 0;
+    int n = yyleng;
+
+    if(i == n || !(isdigit((unsigned char)str[i]) || str[i] == '.')) return false;
+
+    while(i < n && isdigit((unsigned char)str[i])) ++i;
+
+    if(i < n && str[i] == '.') ++i;
+    else 
+        return false;
+
+    if(i == n || !isdigit((unsigned char)str[i])) return false;
+    while(i < n && isdigit((unsigned char)str[i])) ++i;
+
+    if(i < n && str[i] == 'E')
+    {
+        ++i;
+        if(i < n && (str[i] == '+' || str[i] == '-')) ++i;
+
+        if(i == n || !isdigit((unsigned char)str[i])) return false;
+        while(i < n && isdigit((unsigned char)str[i])) ++i;
+    }
+
+    return i == n;
 }
