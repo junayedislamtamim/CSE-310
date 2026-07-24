@@ -3,3 +3,4 @@ main
 *.dSYM
 online*.cpp
 lex.yy.cc
+scanner
