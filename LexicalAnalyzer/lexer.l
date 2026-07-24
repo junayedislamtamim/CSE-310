@@ -7,6 +7,7 @@
 
     #define KEYWORD_COUNT 21
     #define BUCKET_COUNT 7
+    #define SILENT true
 
     using namespace std;
 
@@ -64,7 +65,7 @@ PAREN [(){}\[\],;]
     string token;
     if(isKeyword(yytext))
     {
-        string type = keywordTable->lookUp(yytext, true)->getSymbolType();
+        string type = keywordTable->lookUp(yytext)->getSymbolType();
         token = "<" + type + ">";
     }
     else
@@ -291,7 +292,7 @@ int main(int argc,char** argv)
     if(!logF.is_open() || !outF.is_open() || !inputFile.is_open())
         return 0;
     
-    keywordTable = new SymbolTable(BUCKET_COUNT);
+    keywordTable = new SymbolTable(BUCKET_COUNT, SILENT);
     populateKeyword(keywordTable);
 
     yyFlexLexer lexer(&inputFile);
@@ -319,7 +320,7 @@ void populateKeyword(SymbolTable* keywordTable)
 
 bool isKeyword(const string& str)
 {
-    return keywordTable->lookUp(str, true);
+    return keywordTable->lookUp(str);
 }
 
 void log(int lineNo, const string& token, const string& lexeme)
