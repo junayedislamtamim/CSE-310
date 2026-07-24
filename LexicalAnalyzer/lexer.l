@@ -39,6 +39,7 @@
     string getParenType(const string& str);
     string getOPType(const string& str);
     string processString(const string& str);
+    bool isFloat2(const string& str);
 %}
 
 %option c++
@@ -51,7 +52,7 @@
 DIGIT [0-9]
 LETTER [a-zA-Z]
 ESC_CHAR \[nt\'afrbv0]
-OP ([+\-*/%<>=]|"++"|"--"|"<="|">="|"=="|"!="|"&&"|"||")
+OP ([+\-*/%<>=!]|"++"|"--"|"<="|">="|"=="|"!="|"&&"|"||")
 PAREN [(){}\[\],;]
  
     /*RULE SECTION*/
@@ -110,54 +111,45 @@ PAREN [(){}\[\],;]
     }
 }
 
-<INITIAL>'[^']'? {
+<INITIAL>{DIGIT}+E({DIGIT}|{LETTER}|[+-])* {
+    int e = 0;
+
+    string str{yytext};
+    for (const auto& ch: str) 
+    {
+        if(ch == 'E')
+            e++;
+    }
+
+    if(e > 1 || !isFloat2(yytext))
+        logF << "Line No. " << lineNo << " Ill formed floating point number" << '\n';
+    else
+    {
+        string token = string("<CONST_FLOAT, ") + yytext + ">";
+        log(lineNo, token, yytext);
+        outF << token << ' ';
+    }
+}
+
+<INITIAL>'[^']*'? {
     /*Rule for const chars*/
+    // CHAR = '\?{LETTER}'
     char ch;
-    if(yyleng == 1)
+    int i = 0;
+    string str{yytext};
+    int n = str.size();
+    if(n == 1)
     {
-        logF << "Line No. " << lineNo << " Stray '\n";
+        logF << "Line No. " << lineNo << " stray '\n";
         ++errorCount;
         return 0;
     }
-    if(yyleng == 2 && yytext[1] == '\'')
-    {
-        logF << "Line No. " << lineNo << " Empty character constant\n";
-        ++errorCount;
-        return 0;
-    }
-    if(yytext[1] != '\\' && yyleng != 3)
-    {
-        if(yyleng > 3)
-        {
-            logF << "Line No. " << lineNo << " Multi character constant error. Lexeme: '" << string(yytext) << '\n';
-        }
-        else
-        {
-            logF << "Line No. " << lineNo << " Unfinished character: '" << yytext << '\n';
-        }
+    ++i;
 
-        ++errorCount;
-        return 0;
-    }
-
-    if(yytext[1] == '\\' && yyleng != 4)
+    if(i < n && str[i] == '\\')
     {
-        if(yyleng > 4)
-        {
-            logF << "Line No. " << lineNo << " Multi character constant error. Lexeme: '" << string(yytext) << '\n';
-        }
-        else
-        {
-            logF << "Line No. " << lineNo << " Unfinished character: '" << yytext << '\n';
-        }
-
-        ++errorCount;
-        return 0;
-    }
-
-    if(yytext[1] == '\\')
-    {
-        switch(yytext[2])
+        ++i;
+        switch(str[i])
         {
             case 'n': ch = (unsigned char)'\n'; break;
             case 't': ch = (unsigned char)'\t'; break;
@@ -174,13 +166,34 @@ PAREN [(){}\[\],;]
                 ++errorCount;
                 return 0;
         }
+        ++i;
     }
-    else  
-        ch = yytext[1];
-    
-    string token = string("<CONST_CHAR, ") + ch + ">";
-    outF << token << ' ';
-    log(lineNo, token, yytext);
+    else
+    {
+        ch = str[i];
+        ++i;
+    }
+
+    if(i < n && str[i] == '\n')
+    {
+        logF << "Line No. " << lineNo << " Unfinished character " << string(yytext) << '\n';
+        ++errorCount;
+        return 0;
+    }
+
+    if(i < n && str[i] != '\'')
+    {
+        logF << "Line No. " << lineNo << " Multicharacter error " << string(yytext) << '\n';
+        ++errorCount;
+        return 0;
+    }
+
+    if(i < n && str[i] == '\'')
+    {
+        string token = string("<CONST_CHAR, ") + ch + ">";
+        log(lineNo, token, yytext);
+        outF << token <<' ';
+    }
 }
 
 <INITIAL>{OP} {
@@ -354,6 +367,28 @@ bool isFloat(const string& str)
         if(i == n || !isdigit((unsigned char)str[i])) return false;
         while(i < n && isdigit((unsigned char)str[i])) ++i;
     }
+
+    return i == n;
+}
+
+bool isFloat2(const string& str) 
+{
+    //FLOAT = ({DIGIT})+E[+-]?({DIGIT})+ 
+    int i = 0;
+    int n = str.size();
+
+    if(i == n || !isdigit((unsigned char)str[i])) return false;
+
+    while(i < n && isdigit((unsigned char)str[i])) ++i;
+
+    if(i < n && str[i] == 'E') ++i;
+    else 
+        return false;
+
+    if(i < n && (str[i] == '+' || str[i] == '-'))   ++i;
+
+    if(i == n || !isdigit((unsigned char)str[i])) return false;
+    while(i < n && isdigit((unsigned char)str[i])) ++i;
 
     return i == n;
 }
