@@ -1,10 +1,9 @@
 %{
     #include <iostream>
     #include <fstream>
-    #include <FlexLexer.h>
     #include <string>
     #include <cctype>
-    #include "./SymbolTable/SymbolTable.h"
+    #include "../SymbolTable/SymbolTable.h"
 
     #define KEYWORD_COUNT 21
     #define BUCKET_COUNT 7
@@ -51,7 +50,7 @@
 DIGIT [0-9]
 LETTER [a-zA-Z]
 ESC_CHAR \[nt\'afrbv0]
-OP ([+-*/%<>=]|"++"|"--"|"<="|">="|"=="|"!="|"&&"|"||")
+OP ([+\-*/%<>=]|"++"|"--"|"<="|">="|"=="|"!="|"&&"|"||")
 PAREN [(){}\[\],;]
  
     /*RULE SECTION*/
@@ -70,7 +69,7 @@ PAREN [(){}\[\],;]
     }
     else
     {
-        token =  "<ID, " + string(yytext) + ">\n"; 
+        token =  "<ID, " + string(yytext) + ">"; 
     }
 
     outF << token << ' ';
@@ -89,7 +88,8 @@ PAREN [(){}\[\],;]
     int dots = 0;
     int e = 0;
 
-    for (const auto& ch: yytext) 
+    string str{yytext};
+    for (const auto& ch: str) 
     {
         if(ch == '.')
             dots++;
@@ -116,13 +116,13 @@ PAREN [(){}\[\],;]
     {
         logF << "Line No. " << lineNo << " Stray '\n";
         ++errorCount;
-        return;
+        return 0;
     }
     if(yyleng == 2 && yytext[1] == '\'')
     {
         logF << "Line No. " << lineNo << " Empty character constant\n";
         ++errorCount;
-        return;
+        return 0;
     }
     if(yytext[1] != '\\' && yyleng != 3)
     {
@@ -136,7 +136,7 @@ PAREN [(){}\[\],;]
         }
 
         ++errorCount;
-        return;
+        return 0;
     }
 
     if(yytext[1] == '\\' && yyleng != 4)
@@ -151,7 +151,7 @@ PAREN [(){}\[\],;]
         }
 
         ++errorCount;
-        return;
+        return 0;
     }
 
     if(yytext[1] == '\\')
@@ -171,7 +171,7 @@ PAREN [(){}\[\],;]
             default:
                 logF << "Line No. " << lineNo << " Unrecognized character " << string(yytext) << '\n';
                 ++errorCount;
-                return;
+                return 0;
         }
     }
     else  
@@ -282,14 +282,14 @@ PAREN [(){}\[\],;]
 int main(int argc,char** argv)
 {
     if(argc < 2)
-        return 1;
+        return 0;
     
     logF.open(logFile);
     outF.open(logFile);
     inputFile.open(argv[1]);
     
     if(!logF.is_open() || !outF.is_open() || !inputFile.is_open())
-        return 1;
+        return 0;
     
     keywordTable = new SymbolTable(BUCKET_COUNT);
     populateKeyword(keywordTable);
@@ -317,7 +317,7 @@ void populateKeyword(SymbolTable* keywordTable)
     }
 }
 
-bool isKeyword(SymbolTable* keywordTable, const string& str)
+bool isKeyword(const string& str)
 {
     return keywordTable->lookUp(str, true);
 }
@@ -332,7 +332,7 @@ bool isFloat(const string& str)
     //FLOAT = ({DIGIT})*\.({DIGIT})+(E[+-]?{DIGIT}+)? 
 
     int i = 0;
-    int n = yyleng;
+    int n = str.size();
 
     if(i == n || !(isdigit((unsigned char)str[i]) || str[i] == '.')) return false;
 
