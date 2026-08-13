@@ -8,14 +8,14 @@
 
 using namespace std;
 
-int unique_id_counter = 1;
+inline int unique_id_cnt = 1;
 
 class ScopeTable
 {
 private:
     ScopeTable* parentScope = nullptr;
     SymbolInfo** hashTable = nullptr;
-    const int unique_id = unique_id_counter++;
+    const int unique_id = unique_id_cnt++;
     int bucketNumber;
     bool silent = false;
 public:

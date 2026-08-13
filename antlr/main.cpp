@@ -4,6 +4,7 @@
 #include "antlr4-runtime.h"
 #include "CSubsetLexer.h"
 #include "CSubsetParser.h"
+#include "CSubsetVisitorIMP.h"
 
 using namespace antlr4;
 using namespace std;
@@ -29,6 +30,9 @@ int main(int argc, const char* argv[]) {
 
     CSubsetParser::StartContext* tree = parser.start();
 
+    CSubsetVisitorIMP visitor;
+    visitor.visit(tree);
+    
     cout << "Parsing completed." << endl;
 
     inputFile.close();
