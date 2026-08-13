@@ -417,51 +417,223 @@ public:
         return temp;
     }
 
-    virtual std::any visitLogic_expression(CSubsetParser::Logic_expressionContext *ctx) override
+    virtual std::any visitLogic_expression_one(CSubsetParser::Logic_expression_oneContext *ctx) override
     {
         auto temp = visitChildren(ctx);
+
+        log(ctx->getStart()->getLine(), "logic_expression", "rel_expression");
+        log2(getExactRuleText(ctx, tokenStream));
+
         return temp;
     }
 
-    virtual std::any visitRel_expression(CSubsetParser::Rel_expressionContext *ctx) override
+    virtual std::any visitLogic_expression_two(CSubsetParser::Logic_expression_twoContext *ctx) override
     {
         auto temp = visitChildren(ctx);
+
+        log(ctx->getStart()->getLine(), "logic_expression", "rel_expression LOGICOP rel_expression");
+        log2(getExactRuleText(ctx, tokenStream));
+
         return temp;
     }
 
-    virtual std::any visitSimple_expression(CSubsetParser::Simple_expressionContext *ctx) override
+    virtual std::any visitRel_expression_one(CSubsetParser::Rel_expression_oneContext *ctx) override
     {
         auto temp = visitChildren(ctx);
+
+        log(ctx->getStart()->getLine(), "rel_expression", "simple_expression");
+        log2(getExactRuleText(ctx, tokenStream));
+
         return temp;
     }
 
-    virtual std::any visitTerm(CSubsetParser::TermContext *ctx) override
+    virtual std::any visitRel_expression_two(CSubsetParser::Rel_expression_twoContext *ctx) override
     {
         auto temp = visitChildren(ctx);
+
+        log(ctx->getStart()->getLine(), "rel_expression", "simple_expression RELOP simple_expression");
+        log2(getExactRuleText(ctx, tokenStream));
+
         return temp;
     }
 
-    virtual std::any visitUnary_expression(CSubsetParser::Unary_expressionContext *ctx) override
+    virtual std::any visitSimple_expression_two(CSubsetParser::Simple_expression_twoContext *ctx) override
     {
         auto temp = visitChildren(ctx);
+
+        log(ctx->getStart()->getLine(), "simple_expression", "simple_expression ADDOP term");
+        log2(getExactRuleText(ctx, tokenStream));
+
         return temp;
     }
 
-    virtual std::any visitFactor(CSubsetParser::FactorContext *ctx) override
+    virtual std::any visitSimple_expression_one(CSubsetParser::Simple_expression_oneContext *ctx) override
     {
         auto temp = visitChildren(ctx);
+
+        log(ctx->getStart()->getLine(), "simple_expression", "term");
+        log2(getExactRuleText(ctx, tokenStream));
+
         return temp;
     }
 
-    virtual std::any visitArgument_list(CSubsetParser::Argument_listContext *ctx) override
+    virtual std::any visitTerm_one(CSubsetParser::Term_oneContext *ctx) override
     {
         auto temp = visitChildren(ctx);
+
+        log(ctx->getStart()->getLine(), "term", "unary_expression");
+        log2(getExactRuleText(ctx, tokenStream));
+
         return temp;
     }
 
-    virtual std::any visitArguments(CSubsetParser::ArgumentsContext *ctx) override
+    virtual std::any visitTerm_two(CSubsetParser::Term_twoContext *ctx) override
     {
         auto temp = visitChildren(ctx);
+
+        log(ctx->getStart()->getLine(), "term", "term MULOP unary_expression");
+        log2(getExactRuleText(ctx, tokenStream));
+
+        return temp;
+    }
+
+    virtual std::any visitUnary_expression_one(CSubsetParser::Unary_expression_oneContext *ctx) override
+    {
+        auto temp = visitChildren(ctx);
+
+        log(ctx->getStart()->getLine(), "unary_expression", "ADDOP unary_expression");
+        log2(getExactRuleText(ctx, tokenStream));
+
+        return temp;
+    }
+
+    virtual std::any visitUnary_expression_two(CSubsetParser::Unary_expression_twoContext *ctx) override
+    {
+        auto temp = visitChildren(ctx);
+
+        log(ctx->getStart()->getLine(), "unary_expression", "NOT unary_expression");
+        log2(getExactRuleText(ctx, tokenStream));
+
+        return temp;
+    }
+
+    virtual std::any visitUnary_expression_three(CSubsetParser::Unary_expression_threeContext *ctx) override
+    {
+        auto temp = visitChildren(ctx);
+
+        log(ctx->getStart()->getLine(), "unary_expression", "factor");
+        log2(getExactRuleText(ctx, tokenStream));
+
+        return temp;
+    }
+
+    virtual std::any visitFactor_one(CSubsetParser::Factor_oneContext *ctx) override
+    {
+        auto temp = visitChildren(ctx);
+
+        log(ctx->getStart()->getLine(), "factor", "variable");
+        log2(getExactRuleText(ctx, tokenStream));
+
+        return temp;
+    }
+
+    virtual std::any visitFactor_two(CSubsetParser::Factor_twoContext *ctx) override
+    {
+        auto temp = visitChildren(ctx);
+
+        log(ctx->getStart()->getLine(), "factor", "ID LPAREN argument_list RPAREN");
+        log2(getExactRuleText(ctx, tokenStream));
+
+        return temp;
+    }
+
+    virtual std::any visitFactor_three(CSubsetParser::Factor_threeContext *ctx) override
+    {
+        auto temp = visitChildren(ctx);
+
+        log(ctx->getStart()->getLine(), "factor", "LPAREN expression RPAREN");
+        log2(getExactRuleText(ctx, tokenStream));
+
+        return temp;
+    }
+
+    virtual std::any visitFactor_four(CSubsetParser::Factor_fourContext *ctx) override
+    {
+        auto temp = visitChildren(ctx);
+
+        log(ctx->getStart()->getLine(), "factor", "CONST_INT");
+        log2(getExactRuleText(ctx, tokenStream));
+
+        return temp;
+    }
+
+    virtual std::any visitFactor_five(CSubsetParser::Factor_fiveContext *ctx) override
+    {
+        auto temp = visitChildren(ctx);
+
+        log(ctx->getStart()->getLine(), "factor", "CONST_FLOAT");
+        log2(getExactRuleText(ctx, tokenStream));
+
+        return temp;
+    }
+
+    virtual std::any visitFactor_six(CSubsetParser::Factor_sixContext *ctx) override
+    {
+        auto temp = visitChildren(ctx);
+
+        log(ctx->getStart()->getLine(), "factor", "variable INCOP");
+        log2(getExactRuleText(ctx, tokenStream));
+
+        return temp;
+    }
+
+    virtual std::any visitFactor_seven(CSubsetParser::Factor_sevenContext *ctx) override
+    {
+        auto temp = visitChildren(ctx);
+
+        log(ctx->getStart()->getLine(), "factor", "variable DECOP");
+        log2(getExactRuleText(ctx, tokenStream));
+
+        return temp;
+    }
+
+    virtual std::any visitArgument_list_one(CSubsetParser::Argument_list_oneContext *ctx) override
+    {
+        auto temp = visitChildren(ctx);
+
+        log(ctx->getStart()->getLine(), "argument_list", "arguments");
+        log2(getExactRuleText(ctx, tokenStream));
+
+        return temp;
+    }
+
+    virtual std::any visitArgument_list_two(CSubsetParser::Argument_list_twoContext *ctx) override
+    {
+        auto temp = visitChildren(ctx);
+
+        log(ctx->getStart()->getLine(), "argument_list", "");
+        log2(getExactRuleText(ctx, tokenStream));
+
+        return temp;
+    }
+
+    virtual std::any visitArguments_two(CSubsetParser::Arguments_twoContext *ctx) override
+    {
+        auto temp = visitChildren(ctx);
+
+        log(ctx->getStart()->getLine(), "arguments", "arguments COMMA logic_expression");
+        log2(getExactRuleText(ctx, tokenStream));
+
+        return temp;
+    }
+
+    virtual std::any visitArguments_one(CSubsetParser::Arguments_oneContext *ctx) override
+    {
+        auto temp = visitChildren(ctx);
+
+        log(ctx->getStart()->getLine(), "arguments", "logic_expression");
+        log2(getExactRuleText(ctx, tokenStream));
+
         return temp;
     }
 

@@ -85,47 +85,47 @@ expression
     ;
 
 logic_expression
-    : rel_expression
-    | rel_expression LOGICOP rel_expression
+    : rel_expression #logic_expression_one
+    | rel_expression LOGICOP rel_expression #logic_expression_two
     ;
 
 rel_expression
-    : simple_expression
-    | simple_expression RELOP simple_expression
+    : simple_expression #rel_expression_one
+    | simple_expression RELOP simple_expression #rel_expression_two
     ;
 
 simple_expression
-    : term
-    | simple_expression ADDOP term
+    : term #simple_expression_one
+    | simple_expression ADDOP term #simple_expression_two
     ;
 
 term
-    : unary_expression
-    | term MULOP unary_expression
+    : unary_expression #term_one
+    | term MULOP unary_expression #term_two
     ;
 
 unary_expression
-    : ADDOP unary_expression
-    | NOT unary_expression
-    | factor
+    : ADDOP unary_expression #unary_expression_one
+    | NOT unary_expression #unary_expression_two
+    | factor #unary_expression_three
     ;
 
 factor
-    : variable
-    | ID LPAREN argument_list RPAREN
-    | LPAREN expression RPAREN
-    | CONST_INT
-    | CONST_FLOAT
-    | variable INCOP
-    | variable DECOP
+    : variable #factor_one
+    | ID LPAREN argument_list RPAREN #factor_two
+    | LPAREN expression RPAREN #factor_three
+    | CONST_INT #factor_four
+    | CONST_FLOAT #factor_five
+    | variable INCOP #factor_six
+    | variable DECOP #factor_seven
     ;
 
 argument_list
-    : arguments
-    |
+    : arguments #argument_list_one
+    | #argument_list_two
     ;
 
 arguments
-    : arguments COMMA logic_expression
-    | logic_expression
-    ;
+    : arguments COMMA logic_expression #arguments_two
+    | logic_expression #arguments_one
+     ;
