@@ -5,6 +5,7 @@
 #include "CSubsetLexer.h"
 #include "CSubsetParser.h"
 #include "CSubsetVisitorIMP.h"
+#define SYMBOL_TABLE_SIZE 64
 
 using namespace antlr4;
 using namespace std;
@@ -23,6 +24,9 @@ int main(int argc, const char* argv[]) {
         return 1;
     }
 
+    SymbolTable symbolTable(SYMBOL_TABLE_SIZE,true);
+    ofstream logF("output/log.txt");
+
     ANTLRInputStream input(inputFile);
     CSubsetLexer lexer(&input);
     CommonTokenStream tokens(&lexer);
@@ -30,11 +34,12 @@ int main(int argc, const char* argv[]) {
 
     CSubsetParser::StartContext* tree = parser.start();
 
-    CSubsetVisitorIMP visitor;
+    CSubsetVisitorIMP visitor(symbolTable, logF, &tokens);
     visitor.visit(tree);
-    
+
     cout << "Parsing completed." << endl;
 
     inputFile.close();
+    logF.close();
     return 0;
 }
