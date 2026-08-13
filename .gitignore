@@ -4,4 +4,10 @@ main
 online*.cpp
 lex.yy.cc
 scanner
-antlr/venv/
+antlr/*
+!antlr/CSubset.g4
+!antlr/Lexer.g4
+!antlr/run.sh
+!antlr/visualize.sh
+!antlr/main.cpp
+!antlr/CSubsetVisitorIMP.*
