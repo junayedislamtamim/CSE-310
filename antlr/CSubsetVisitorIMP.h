@@ -23,6 +23,9 @@ public:
         log(ctx->getStart()->getLine(), "start", "program");
         log2(getExactRuleText(ctx, tokenStream));
 
+        symbolTable.printAllScopeTables(logF);
+        symbolTable.exitScope();
+
         return temp;
     }
 
@@ -68,7 +71,21 @@ public:
 
     virtual std::any visitUnit_func_definition(CSubsetParser::Unit_func_definitionContext *ctx) override
     {
+        auto funcDefCtx = ctx->func_definition();
+        string funcName;
+
+        if (auto p = dynamic_cast<CSubsetParser::Func_definition_paramContext *>(funcDefCtx))
+        {
+            funcName = p->ID()->getText();
+        }
+        else if (auto np = dynamic_cast<CSubsetParser::Func_definition_no_paramContext *>(funcDefCtx))
+        {
+            funcName = np->ID()->getText();
+        }
+
+        symbolTable.insertSymbol(funcName, "ID");
         symbolTable.enterScope();
+
         auto temp = visitChildren(ctx);
 
         log(ctx->getStart()->getLine(), "unit", "func_definition");
@@ -84,6 +101,11 @@ public:
     {
         auto temp = visitChildren(ctx);
 
+        string type = "ID";
+        string ID = ctx->ID()->getText();
+
+        symbolTable.insertSymbol(ID, type);
+
         log(ctx->getStart()->getLine(), "func_declaration", "type_specifier ID LPAREN parameter_list RPAREN SEMICOLON");
         log2(getExactRuleText(ctx, tokenStream));
 
@@ -93,6 +115,11 @@ public:
     virtual std::any visitFunc_declaration_no_param(CSubsetParser::Func_declaration_no_paramContext *ctx) override
     {
         auto temp = visitChildren(ctx);
+
+        string type = "ID";
+        string ID = ctx->ID()->getText();
+
+        symbolTable.insertSymbol(ID, type);
 
         log(ctx->getStart()->getLine(), "func_declaration", "type_specifier ID LPAREN RPAREN SEMICOLON");
         log2(getExactRuleText(ctx, tokenStream));
@@ -123,8 +150,8 @@ public:
     virtual std::any visitParamlist_typespec_id(CSubsetParser::Paramlist_typespec_idContext *ctx) override
     {
         auto temp = visitChildren(ctx);
-        
-        string type = to_upper(ctx->type_specifier()->getText());
+
+        string type = "ID";
         string ID = ctx->ID()->getText();
 
         symbolTable.insertSymbol(ID, type);
@@ -148,6 +175,11 @@ public:
     virtual std::any visitParamlist_comma_typespec_id(CSubsetParser::Paramlist_comma_typespec_idContext *ctx) override
     {
         auto temp = visitChildren(ctx);
+
+        string type = "ID";
+        string ID = ctx->ID()->getText();
+
+        symbolTable.insertSymbol(ID, type);
 
         log(ctx->getStart()->getLine(), "parameter_list", "parameter_list COMMA type_specifier ID");
         log2(getExactRuleText(ctx, tokenStream));
@@ -188,15 +220,13 @@ public:
     virtual std::any visitVar_declaration(CSubsetParser::Var_declarationContext *ctx) override
     {
         auto temp = visitChildren(ctx);
-
-        string type = ctx->type_specifier()->getText();
         stringstream ss(ctx->declaration_list()->getText());
         string id;
-        string TYPE = to_upper(type);
+        string type = "ID";
 
         while (getline(ss, id, ','))
         {
-            symbolTable.insertSymbol(id, TYPE);
+            symbolTable.insertSymbol(id, type);
         }
 
         log(ctx->getStart()->getLine(), "var_declaration", "type_specifier declaration_list SEMICOLON");

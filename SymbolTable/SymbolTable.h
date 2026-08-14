@@ -91,6 +91,8 @@ public:
             head = head->getParentScope();
             spacing += "    ";
         }
+
+        out << '\n';
     }
 };
 
