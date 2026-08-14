@@ -21,7 +21,7 @@ public:
         this->silent = silent;
     }
 
-    void print() { if(!silent) cout << "<" + symbolName + "," + symbolType + "> ";  }
+    void print(ostream& out = cout) { if(!silent) out << "<" + symbolName + "," + symbolType + "> ";  }
 
     void setSymbolName(const string&  symbolName)
     {

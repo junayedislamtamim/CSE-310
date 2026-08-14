@@ -4,6 +4,7 @@
 #include <string>
 #include <cstdio>
 #include <iostream>
+#include <fstream>
 #include "SymbolInfo.h"
 
 using namespace std;
@@ -24,7 +25,7 @@ public:
         hashTable = new SymbolInfo*[bucketNumber]{};
         this->silent = silent;
         this->parentScope = parentScope; 
-         
+
         if(parentScope != nullptr)
         {
             parentScope->childrenCount++;
@@ -155,27 +156,22 @@ public:
         return true;
     }
 
-    void print(const string&  spacing = "   ")
+    void print(ostream& out = cout, const string&  spacing = "   ")
     {
-        if(!silent) cout << spacing << "ScopeTable# " << unique_id << "\n";
+        if(!silent) out << spacing << "ScopeTable# " << unique_id << "\n";
         for(int i =0; i < bucketNumber; ++i)
         {
             SymbolInfo* head = hashTable[i];
-            if(!silent) cout << spacing <<  i + 1 << "--> ";
+            if(!silent) out << spacing <<  i + 1 << "--> ";
             while(head != nullptr)
             {
-                head->print();
+                head->print(out);
                 head = head->getNext();
             }
             
-            if(!silent) cout << '\n';
+            if(!silent) out << '\n';
         }
     }
-
-    // void setParentScope(ScopeTable* parentScope)
-    // {
-    //     this->parentScope = parentScope;
-    // }
 
     ScopeTable* getParentScope() { return parentScope; }
     int getBucketNumber() { return bucketNumber; }

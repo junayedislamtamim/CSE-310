@@ -73,21 +73,21 @@ public:
         return nullptr;
     }
 
-    void printCurrentScopeTable()
+    void printCurrentScopeTable(ostream& out = cout)
     {
         if (currentScopeTable == nullptr)
             return;
 
-        currentScopeTable->print();
+        currentScopeTable->print(out);
     }
 
-    void printAllScopeTables()
+    void printAllScopeTables(ostream& out = cout)
     {
         ScopeTable *head = currentScopeTable;
         string spacing = "  ";
         while (head != nullptr)
         {
-            head->print(spacing);
+            head->print(out, spacing);
             head = head->getParentScope();
             spacing += "    ";
         }
