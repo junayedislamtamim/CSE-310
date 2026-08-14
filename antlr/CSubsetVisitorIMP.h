@@ -12,7 +12,7 @@ class CSubsetVisitorIMP : public CSubsetVisitor
     SymbolTable &symbolTable;
     ofstream &logF;
     antlr4::CommonTokenStream *tokenStream;
-
+    int errorCount = 0;
 public:
     CSubsetVisitorIMP(SymbolTable &st, ofstream &of, antlr4::CommonTokenStream *ts) : symbolTable(st), logF(of), tokenStream(ts) {}
 
@@ -26,6 +26,8 @@ public:
         symbolTable.printAllScopeTables(logF);
         symbolTable.exitScope();
 
+        logF << "Total lines: " << ctx->getStop()->getLine() << '\n';
+        logF << "Total errors: " << errorCount << '\n';
         return temp;
     }
 
