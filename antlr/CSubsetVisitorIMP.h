@@ -68,10 +68,14 @@ public:
 
     virtual std::any visitUnit_func_definition(CSubsetParser::Unit_func_definitionContext *ctx) override
     {
+        symbolTable.enterScope();
         auto temp = visitChildren(ctx);
 
         log(ctx->getStart()->getLine(), "unit", "func_definition");
         log2(getExactRuleText(ctx, tokenStream));
+
+        symbolTable.printAllScopeTables(logF);
+        symbolTable.exitScope();
 
         return temp;
     }
@@ -119,6 +123,11 @@ public:
     virtual std::any visitParamlist_typespec_id(CSubsetParser::Paramlist_typespec_idContext *ctx) override
     {
         auto temp = visitChildren(ctx);
+        
+        string type = to_upper(ctx->type_specifier()->getText());
+        string ID = ctx->ID()->getText();
+
+        symbolTable.insertSymbol(ID, type);
 
         log(ctx->getStart()->getLine(), "parameter_list", "type_specifier ID");
         log2(getExactRuleText(ctx, tokenStream));

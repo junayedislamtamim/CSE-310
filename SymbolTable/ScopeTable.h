@@ -158,18 +158,18 @@ public:
 
     void print(ostream& out = cout, const string&  spacing = "   ")
     {
-        if(!silent) out << spacing << "ScopeTable# " << unique_id << "\n";
+        out << spacing << "ScopeTable# " << unique_id << "\n";
         for(int i =0; i < bucketNumber; ++i)
         {
             SymbolInfo* head = hashTable[i];
-            if(!silent) out << spacing <<  i + 1 << "--> ";
+            if(hashTable[i] != nullptr) out << spacing <<  i + 1 << "--> ";
             while(head != nullptr)
             {
                 head->print(out);
                 head = head->getNext();
             }
             
-            if(!silent) out << '\n';
+            if(hashTable[i] != nullptr) out << '\n';
         }
     }
 

@@ -24,7 +24,7 @@ int main(int argc, const char* argv[]) {
         return 1;
     }
 
-    SymbolTable symbolTable(SYMBOL_TABLE_SIZE,true);
+    SymbolTable symbolTable(SYMBOL_TABLE_SIZE, true);
     ofstream logF("output/log.txt");
 
     ANTLRInputStream input(inputFile);
