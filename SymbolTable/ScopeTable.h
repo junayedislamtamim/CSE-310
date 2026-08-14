@@ -109,20 +109,28 @@ public:
 
         if(head == nullptr)
         {
-            head = new SymbolInfo(symbolName, symbolType, silent, typeInfo);
+            head = new SymbolInfo(symbolName, symbolType,  typeInfo, silent);
             hashTable[hashBucket] = head;
         }
         else
-            head->setNext(new SymbolInfo(symbolName, symbolType, silent, typeInfo));
+            head->setNext(new SymbolInfo(symbolName, symbolType, typeInfo, silent));
         
         return true; 
     }
 
-    bool insertSymbol(const string&  symbolName, string symbolType, const FunctionInfo& functionInfo)
+    bool insertSymbol(const string&  symbolName, string symbolType, shared_ptr<FunctionInfo> functionInfo)
     {
         int i = 1;
-        if(symbolName.empty() || this->lookUpSymbol(symbolName) != nullptr)
+        SymbolInfo* t = this->lookUpSymbol(symbolName);
+        if(symbolName.empty() || (t != nullptr))
         {
+            if(t != nullptr && t->isFunction() && !t->isDefinedFunction() && functionInfo->isDefined)
+            {
+            //that means we are now providing a definition for a function we previously declared
+                t->defineFunction();
+                return true;
+            }
+
             if(!silent) cout<< "    " << "Insertion Failed :" << (symbolName.empty() ? "Empty SymbolName" : "SymbolName already exists") <<"\n";
             return false;
         }
@@ -140,11 +148,11 @@ public:
 
         if(head == nullptr)
         {
-            head = new SymbolInfo(symbolName, symbolType, silent, functionInfo);
+            head = new SymbolInfo(symbolName, symbolType, functionInfo, silent);
             hashTable[hashBucket] = head;
         }
         else
-            head->setNext(new SymbolInfo(symbolName, symbolType, silent, functionInfo));
+            head->setNext(new SymbolInfo(symbolName, symbolType, functionInfo, silent));
         
         return true; 
     }

@@ -93,7 +93,12 @@ public:
             returnType = makeType(getType(np->type_specifier()->getText()), false, 0);
         }
 
-        symbolTable.insertSymbol(funcName, "ID", FunctionInfo{returnType, paramTypes, true});
+        if(!symbolTable.insertSymbol(funcName, "ID", make_shared<FunctionInfo>(returnType, paramTypes, true)))
+        {
+            errF << "Line " << ctx->getStart()->getLine()
+                 << ": Multiple declaration of parameter '" << funcName << "'\n";
+        }
+
         symbolTable.enterScope();
 
         auto temp = visitChildren(ctx);
@@ -109,8 +114,6 @@ public:
 
     virtual std::any visitFunc_declaration_param(CSubsetParser::Func_declaration_paramContext *ctx) override
     {
-        auto temp = visitChildren(ctx);
-
         string type = "ID";
         string ID = ctx->ID()->getText();
         TypeInfo returnType;
@@ -119,29 +122,46 @@ public:
         returnType = makeType(getType(ctx->type_specifier()->getText()), false, 0);
         paramTypes = extractParamTypes(ctx->parameter_list());
 
-        symbolTable.insertSymbol(ID, type, FunctionInfo{returnType, paramTypes, true});
+        
+        if(!symbolTable.insertSymbol(ID, "ID", make_shared<FunctionInfo>(returnType, paramTypes, false)))
+        {
+            errF << "Line " << ctx->getStart()->getLine()
+                 << ": Multiple declaration of parameter '" << ID << "'\n";
+        }
+
+        symbolTable.enterScope();
+
+        auto temp = visitChildren(ctx);
 
         log(ctx->getStart()->getLine(), "func_declaration", "type_specifier ID LPAREN parameter_list RPAREN SEMICOLON");
         log2(getExactRuleText(ctx, tokenStream));
-
+        
+        symbolTable.exitScope();
         return temp;
     }
 
     virtual std::any visitFunc_declaration_no_param(CSubsetParser::Func_declaration_no_paramContext *ctx) override
     {
-        auto temp = visitChildren(ctx);
-
         string type = "ID";
         string ID = ctx->ID()->getText();
         TypeInfo returnType;
         vector<TypeInfo> paramTypes;
 
         returnType = makeType(getType(ctx->type_specifier()->getText()), false, 0);
-        symbolTable.insertSymbol(ID, type, FunctionInfo{returnType, paramTypes, true});
+        if(!symbolTable.insertSymbol(ID, "ID", make_shared<FunctionInfo>(returnType, paramTypes, false)))
+        {
+            errF << "Line " << ctx->getStart()->getLine()
+                 << ": Multiple declaration of parameter '" << ID << "'\n";
+        }
+
+        symbolTable.enterScope();
+
+        auto temp = visitChildren(ctx);
 
         log(ctx->getStart()->getLine(), "func_declaration", "type_specifier ID LPAREN RPAREN SEMICOLON");
         log2(getExactRuleText(ctx, tokenStream));
 
+        symbolTable.exitScope();
         return temp;
     }
 
@@ -172,7 +192,12 @@ public:
         string type = "ID";
         string ID = ctx->ID()->getText();
 
-        symbolTable.insertSymbol(ID, type, makeType(getType(ctx->type_specifier()->getText()), false, 0));
+        if (!symbolTable.insertSymbol(ID, type, makeType(getType(ctx->type_specifier()->getText()), false, 0)))
+        {
+            errF << "Line " << ctx->getStart()->getLine()
+                 << ": Multiple declaration of parameter '" << ID << "'\n";
+            errorCount++;
+        }
 
         log(ctx->getStart()->getLine(), "parameter_list", "type_specifier ID");
         log2(getExactRuleText(ctx, tokenStream));
@@ -197,7 +222,12 @@ public:
         string type = "ID";
         string ID = ctx->ID()->getText();
 
-        symbolTable.insertSymbol(ID, type, makeType(getType(ctx->type_specifier()->getText()), false, 0));
+        if (!symbolTable.insertSymbol(ID, type, makeType(getType(ctx->type_specifier()->getText()), false, 0)))
+        {
+            errF << "Line " << ctx->getStart()->getLine()
+                 << ": Multiple declaration of parameter '" << ID << "'\n";
+            errorCount++;
+        }
 
         log(ctx->getStart()->getLine(), "parameter_list", "parameter_list COMMA type_specifier ID");
         log2(getExactRuleText(ctx, tokenStream));
@@ -440,271 +470,397 @@ public:
 
     virtual std::any visitVariable_one(CSubsetParser::Variable_oneContext *ctx) override
     {
-        auto temp = visitChildren(ctx);
+        string id = ctx->ID()->getText();
+        TypeInfo result{BaseType::UNKNOWN, false, 0};
+        SymbolInfo *sym = symbolTable.lookUp(id);
+
+        if (!sym)
+        {
+            errF << "Line " << ctx->getStart()->getLine() << ": Undeclared variable '" << id << "'\n";
+            errorCount++;
+        }
+        else if (sym->isFunction())
+        {
+            errF << "Line " << ctx->getStart()->getLine() << ": '" << id << "' is a function, used as variable\n";
+            errorCount++;
+        }
+        else
+        {
+            result = sym->getVarType();
+            if (result.isArray)
+            {
+                errF << "Line " << ctx->getStart()->getLine() << ": '" << id << "' is an array, used without index\n";
+                errorCount++;
+            }
+        }
 
         log(ctx->getStart()->getLine(), "variable", "ID");
         log2(getExactRuleText(ctx, tokenStream));
-
-        return temp;
+        return result;
     }
 
     virtual std::any visitVariable_two(CSubsetParser::Variable_twoContext *ctx) override
     {
-        auto temp = visitChildren(ctx);
+        string id = ctx->ID()->getText();
+        TypeInfo result{BaseType::UNKNOWN, false, 0};
+        SymbolInfo *sym = symbolTable.lookUp(id);
+
+        auto indexType = std::any_cast<TypeInfo>(visit(ctx->expression()));
+        if (indexType.base != BaseType::UNKNOWN && indexType.base != BaseType::INT)
+        {
+            errF << "Line " << ctx->getStart()->getLine()
+                 << ": Non-integer array index for '" << id << "'\n";
+            errorCount++;
+        }
+
+        if (!sym)
+        {
+            errF << "Line " << ctx->getStart()->getLine() << ": Undeclared variable '" << id << "'\n";
+            errorCount++;
+        }
+        else if (sym->isFunction())
+        {
+            errF << "Line " << ctx->getStart()->getLine() << ": '" << id << "' is a function, used as variable\n";
+            errorCount++;
+        }
+        else
+        {
+            TypeInfo varType = sym->getVarType();
+            if (!varType.isArray)
+            {
+                errF << "Line " << ctx->getStart()->getLine()
+                     << ": '" << id << "' is not an array, indexed\n";
+                errorCount++;
+            }
+            result = makeType(varType.base, false, 0);
+        }
 
         log(ctx->getStart()->getLine(), "variable", "ID LTHIRD expression RTHIRD");
         log2(getExactRuleText(ctx, tokenStream));
-
-        return temp;
+        return result;
     }
 
     virtual std::any visitExpression_one(CSubsetParser::Expression_oneContext *ctx) override
     {
-        auto temp = visitChildren(ctx);
+        auto t = std::any_cast<TypeInfo>(visit(ctx->logic_expression()));
 
         log(ctx->getStart()->getLine(), "expression", "logic_expression");
         log2(getExactRuleText(ctx, tokenStream));
 
-        return temp;
+        return t;
     }
 
     virtual std::any visitExpression_two(CSubsetParser::Expression_twoContext *ctx) override
     {
-        auto temp = visitChildren(ctx);
+        auto lhs = std::any_cast<TypeInfo>(visit(ctx->variable()));
+        auto rhs = std::any_cast<TypeInfo>(visit(ctx->logic_expression()));
+
+        if (lhs.base == BaseType::VOID || rhs.base == BaseType::VOID)
+        {
+            errF << "Line " << ctx->getStart()->getLine() << ": Void type in assignment\n";
+            errorCount++;
+        }
+        else if (lhs.base == BaseType::INT && rhs.base == BaseType::FLOAT)
+        {
+            errF << "Line " << ctx->getStart()->getLine()
+                 << ": Warning: assigning FLOAT to INT variable\n";
+        }
+        else if (lhs.base == BaseType::FLOAT && rhs.base == BaseType::INT)
+        {
+            // do nothing
+        }
+        else if (lhs.base != BaseType::UNKNOWN && rhs.base != BaseType::UNKNOWN && lhs.base != rhs.base)
+        {
+            errF << "Line " << ctx->getStart()->getLine() << ": Type mismatch in assignment\n";
+            errorCount++;
+        }
 
         log(ctx->getStart()->getLine(), "expression", "variable ASSIGNOP logic_expression");
         log2(getExactRuleText(ctx, tokenStream));
 
-        return temp;
+        return lhs;
     }
 
     virtual std::any visitLogic_expression_one(CSubsetParser::Logic_expression_oneContext *ctx) override
     {
-        auto temp = visitChildren(ctx);
+        auto t = std::any_cast<TypeInfo>(visit(ctx->rel_expression()));
 
         log(ctx->getStart()->getLine(), "logic_expression", "rel_expression");
         log2(getExactRuleText(ctx, tokenStream));
 
-        return temp;
+        return t;
     }
 
     virtual std::any visitLogic_expression_two(CSubsetParser::Logic_expression_twoContext *ctx) override
     {
-        auto temp = visitChildren(ctx);
+        visit(ctx->rel_expression(0));
+        visit(ctx->rel_expression(1));
 
         log(ctx->getStart()->getLine(), "logic_expression", "rel_expression LOGICOP rel_expression");
         log2(getExactRuleText(ctx, tokenStream));
 
-        return temp;
+        return makeType(BaseType::INT);
     }
 
     virtual std::any visitRel_expression_one(CSubsetParser::Rel_expression_oneContext *ctx) override
     {
-        auto temp = visitChildren(ctx);
+        auto t = std::any_cast<TypeInfo>(visit(ctx->simple_expression()));
 
         log(ctx->getStart()->getLine(), "rel_expression", "simple_expression");
         log2(getExactRuleText(ctx, tokenStream));
 
-        return temp;
+        return t;
     }
 
     virtual std::any visitRel_expression_two(CSubsetParser::Rel_expression_twoContext *ctx) override
     {
-        auto temp = visitChildren(ctx);
+        visit(ctx->simple_expression(0));
+        visit(ctx->simple_expression(1));
 
         log(ctx->getStart()->getLine(), "rel_expression", "simple_expression RELOP simple_expression");
         log2(getExactRuleText(ctx, tokenStream));
 
-        return temp;
+        return makeType(BaseType::INT);
     }
 
     virtual std::any visitSimple_expression_two(CSubsetParser::Simple_expression_twoContext *ctx) override
     {
-        auto temp = visitChildren(ctx);
+        auto lhs = std::any_cast<TypeInfo>(visit(ctx->simple_expression()));
+        auto rhs = std::any_cast<TypeInfo>(visit(ctx->term()));
 
         log(ctx->getStart()->getLine(), "simple_expression", "simple_expression ADDOP term");
         log2(getExactRuleText(ctx, tokenStream));
 
-        return temp;
+        return (lhs.base == BaseType::FLOAT || rhs.base == BaseType::FLOAT)
+                   ? makeType(BaseType::FLOAT)
+                   : makeType(BaseType::INT);
     }
 
     virtual std::any visitSimple_expression_one(CSubsetParser::Simple_expression_oneContext *ctx) override
     {
-        auto temp = visitChildren(ctx);
+        auto t = std::any_cast<TypeInfo>(visit(ctx->term()));
 
         log(ctx->getStart()->getLine(), "simple_expression", "term");
         log2(getExactRuleText(ctx, tokenStream));
 
-        return temp;
+        return t;
     }
 
     virtual std::any visitTerm_one(CSubsetParser::Term_oneContext *ctx) override
     {
-        auto temp = visitChildren(ctx);
+        auto t = std::any_cast<TypeInfo>(visit(ctx->unary_expression()));
+        ;
 
         log(ctx->getStart()->getLine(), "term", "unary_expression");
         log2(getExactRuleText(ctx, tokenStream));
 
-        return temp;
+        return t;
     }
 
     virtual std::any visitTerm_two(CSubsetParser::Term_twoContext *ctx) override
     {
-        auto temp = visitChildren(ctx);
+        auto lhs = std::any_cast<TypeInfo>(visit(ctx->term()));
+        auto rhs = std::any_cast<TypeInfo>(visit(ctx->unary_expression()));
+        string op = ctx->MULOP()->getText();
+
+        if (op == "%" && (lhs.base != BaseType::INT || rhs.base != BaseType::INT))
+        {
+            errF << "Line " << ctx->getStart()->getLine()
+                 << ": Non-integer operand on modulus operator\n";
+            errorCount++;
+        }
 
         log(ctx->getStart()->getLine(), "term", "term MULOP unary_expression");
         log2(getExactRuleText(ctx, tokenStream));
 
-        return temp;
+        return (lhs.base == BaseType::FLOAT || rhs.base == BaseType::FLOAT)
+                   ? makeType(BaseType::FLOAT)
+                   : makeType(BaseType::INT);
     }
 
     virtual std::any visitUnary_expression_one(CSubsetParser::Unary_expression_oneContext *ctx) override
     {
-        auto temp = visitChildren(ctx);
+        auto t = std::any_cast<TypeInfo>(visit(ctx->unary_expression()));
 
         log(ctx->getStart()->getLine(), "unary_expression", "ADDOP unary_expression");
         log2(getExactRuleText(ctx, tokenStream));
 
-        return temp;
+        return t;
     }
 
     virtual std::any visitUnary_expression_two(CSubsetParser::Unary_expression_twoContext *ctx) override
     {
-        auto temp = visitChildren(ctx);
+        auto t = std::any_cast<TypeInfo>(visit(ctx->unary_expression()));
 
         log(ctx->getStart()->getLine(), "unary_expression", "NOT unary_expression");
         log2(getExactRuleText(ctx, tokenStream));
 
-        return temp;
+        return makeType(BaseType::INT);
     }
 
     virtual std::any visitUnary_expression_three(CSubsetParser::Unary_expression_threeContext *ctx) override
     {
-        auto temp = visitChildren(ctx);
+        auto t = std::any_cast<TypeInfo>(visit(ctx->factor()));
 
         log(ctx->getStart()->getLine(), "unary_expression", "factor");
         log2(getExactRuleText(ctx, tokenStream));
 
-        return temp;
+        return t;
     }
 
     virtual std::any visitFactor_one(CSubsetParser::Factor_oneContext *ctx) override
     {
-        auto temp = visitChildren(ctx);
+        auto t = std::any_cast<TypeInfo>(visit(ctx->variable()));
 
         log(ctx->getStart()->getLine(), "factor", "variable");
         log2(getExactRuleText(ctx, tokenStream));
 
-        return temp;
+        return t;
     }
 
     virtual std::any visitFactor_two(CSubsetParser::Factor_twoContext *ctx) override
     {
-        auto temp = visitChildren(ctx);
+        string id = ctx->ID()->getText();
+        vector<TypeInfo> argTypes = std::any_cast<vector<TypeInfo>>(visit(ctx->argument_list()));
+        TypeInfo result{BaseType::UNKNOWN, false, 0};
+        SymbolInfo *sym = symbolTable.lookUp(id);
+
+        if (!sym)
+        {
+            errF << "Line " << ctx->getStart()->getLine() << ": Undeclared function '" << id << "'\n";
+            errorCount++;
+        }
+        else if (!sym->isFunction())
+        {
+            errF << "Line " << ctx->getStart()->getLine() << ": '" << id << "' is not a function\n";
+            errorCount++;
+        }
+        else
+        {
+            auto fi = sym->getFuncInfo();
+            if (fi->paramTypes.size() != argTypes.size())
+            {
+                errF << "Line " << ctx->getStart()->getLine()
+                     << ": Total number of arguments mismatch in function '" << id << "'\n";
+                errorCount++;
+            }
+            else
+            {
+                for (size_t i = 0; i < argTypes.size(); ++i)
+                    if (fi->paramTypes[i].base != argTypes[i].base)
+                    {
+                        errF << "Line " << ctx->getStart()->getLine()
+                             << ": Argument " << (i + 1) << " type mismatch in function '" << id << "'\n";
+                        errorCount++;
+                    }
+            }
+            result = fi->returnType;
+            if (result.base == BaseType::VOID)
+            {
+                errF << "Line " << ctx->getStart()->getLine()
+                     << ": Void function '" << id << "' used in expression\n";
+                errorCount++;
+            }
+        }
 
         log(ctx->getStart()->getLine(), "factor", "ID LPAREN argument_list RPAREN");
         log2(getExactRuleText(ctx, tokenStream));
 
-        return temp;
+        return result;
     }
 
     virtual std::any visitFactor_three(CSubsetParser::Factor_threeContext *ctx) override
     {
-        auto temp = visitChildren(ctx);
+        auto t = std::any_cast<TypeInfo>(visit(ctx->expression()));
 
         log(ctx->getStart()->getLine(), "factor", "LPAREN expression RPAREN");
         log2(getExactRuleText(ctx, tokenStream));
 
-        return temp;
+        return t;
     }
 
     virtual std::any visitFactor_four(CSubsetParser::Factor_fourContext *ctx) override
     {
-        auto temp = visitChildren(ctx);
-
         log(ctx->getStart()->getLine(), "factor", "CONST_INT");
         log2(getExactRuleText(ctx, tokenStream));
 
-        return TypeInfo{BaseType::INT, false, 0};
+        return makeType(BaseType::INT);
     }
 
     virtual std::any visitFactor_five(CSubsetParser::Factor_fiveContext *ctx) override
     {
-        auto temp = visitChildren(ctx);
-
         log(ctx->getStart()->getLine(), "factor", "CONST_FLOAT");
         log2(getExactRuleText(ctx, tokenStream));
 
-        return TypeInfo{BaseType::FLOAT, false, 0};
+        return makeType(BaseType::FLOAT);
     }
 
     virtual std::any visitFactor_six(CSubsetParser::Factor_sixContext *ctx) override
     {
-        auto temp = visitChildren(ctx);
+        auto t = std::any_cast<TypeInfo>(visit(ctx->variable()));
 
         log(ctx->getStart()->getLine(), "factor", "variable INCOP");
         log2(getExactRuleText(ctx, tokenStream));
 
-        return temp;
+        return t;
     }
 
     virtual std::any visitFactor_seven(CSubsetParser::Factor_sevenContext *ctx) override
     {
-        auto temp = visitChildren(ctx);
+        auto t = std::any_cast<TypeInfo>(visit(ctx->variable()));
 
         log(ctx->getStart()->getLine(), "factor", "variable DECOP");
         log2(getExactRuleText(ctx, tokenStream));
 
-        return temp;
+        return t;
     }
 
     virtual std::any visitArgument_list_one(CSubsetParser::Argument_list_oneContext *ctx) override
     {
-        auto temp = visitChildren(ctx);
+        auto types = std::any_cast<vector<TypeInfo>>(visit(ctx->arguments()));
 
         log(ctx->getStart()->getLine(), "argument_list", "arguments");
         log2(getExactRuleText(ctx, tokenStream));
 
-        return temp;
+        return types;
     }
 
     virtual std::any visitArgument_list_two(CSubsetParser::Argument_list_twoContext *ctx) override
     {
-        auto temp = visitChildren(ctx);
-
         log(ctx->getStart()->getLine(), "argument_list", "");
         log2(getExactRuleText(ctx, tokenStream));
-
-        return temp;
+        return vector<TypeInfo>{};
     }
 
     virtual std::any visitArguments_two(CSubsetParser::Arguments_twoContext *ctx) override
     {
-        auto temp = visitChildren(ctx);
+        auto types = std::any_cast<vector<TypeInfo>>(visit(ctx->arguments()));
+        auto t = std::any_cast<TypeInfo>(visit(ctx->logic_expression()));
+        types.push_back(t);
 
         log(ctx->getStart()->getLine(), "arguments", "arguments COMMA logic_expression");
         log2(getExactRuleText(ctx, tokenStream));
 
-        return temp;
+        return types;
     }
 
     virtual std::any visitArguments_one(CSubsetParser::Arguments_oneContext *ctx) override
     {
-        auto temp = visitChildren(ctx);
+        auto t = std::any_cast<TypeInfo>(visit(ctx->logic_expression()));
 
         log(ctx->getStart()->getLine(), "arguments", "logic_expression");
         log2(getExactRuleText(ctx, tokenStream));
 
-        return temp;
+        return vector<TypeInfo>{t};
     }
 
     BaseType getType(string str)
     {
-        if (str == "INT")
+        if (str == "int")
             return BaseType::INT;
-        else if (str == "FLOAT")
+        else if (str == "float")
             return BaseType::FLOAT;
-        else if (str == "VOID")
+        else if (str == "void")
             return BaseType::VOID;
 
         return BaseType::UNKNOWN;

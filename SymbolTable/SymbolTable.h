@@ -51,7 +51,7 @@ public:
         return currentScopeTable->insertSymbol(symbolName, symbolType, typeInfo);
     }
 
-    bool insertSymbol(const string&  symbolName, string symbolType, const FunctionInfo& functionInfo)
+    bool insertSymbol(const string&  symbolName, string symbolType, shared_ptr<FunctionInfo> functionInfo)
     {
         return currentScopeTable->insertSymbol(symbolName, symbolType, functionInfo);
     }

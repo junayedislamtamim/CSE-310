@@ -22,6 +22,9 @@ struct FunctionInfo {
     TypeInfo returnType;
     vector<TypeInfo> paramTypes;
     bool isDefined = false; 
+
+    FunctionInfo(TypeInfo rt, vector<TypeInfo> pt, bool def)
+        : returnType(std::move(rt)), paramTypes(std::move(pt)), isDefined(def) {}
 };
 
 class SymbolInfo
@@ -30,12 +33,12 @@ private:
     string symbolName, symbolType;
     SymbolInfo *next = nullptr;
     bool silent = false;
-    FunctionInfo fInfo;
+    shared_ptr<FunctionInfo> fInfo;
     TypeInfo tInfo;
     bool isFunc = false;
 public:
     SymbolInfo() {}
-    SymbolInfo(const string&  symbolName, string symbolType, bool silent = false, FunctionInfo fI)
+    SymbolInfo(const string&  symbolName, string symbolType,  shared_ptr<FunctionInfo> fI, bool silent = false)
     : fInfo(fI)
     {
         this->symbolName = symbolName;
@@ -44,7 +47,7 @@ public:
         isFunc = true;
     }
 
-    SymbolInfo(const string&  symbolName, string symbolType, bool silent = false, TypeInfo tI)
+    SymbolInfo(const string&  symbolName, string symbolType, TypeInfo tI, bool silent = false)
     : tInfo(tI)
     {
         this->symbolName = symbolName;
@@ -72,6 +75,14 @@ public:
     string getSymbolName() { return symbolName; }
     string getSymbolType() { return symbolType; }
     SymbolInfo* getNext() { return next; }
+    bool isDefinedFunction() { return isFunc && fInfo != nullptr && fInfo->isDefined; }
+    bool isFunction() { return isFunc; }
+    void defineFunction() {
+        if(fInfo != nullptr)
+            fInfo->isDefined = true;
+    }
+    TypeInfo getVarType() { return tInfo; }
+    shared_ptr<FunctionInfo> getFuncInfo() { return fInfo; }
 };
 
 #endif
