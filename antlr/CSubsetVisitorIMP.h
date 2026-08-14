@@ -1,5 +1,6 @@
 #ifndef IMP
 #define IMP
+#include <vector>
 #include "CSubsetVisitor.h"
 #include "../SymbolTable/SymbolTable.h"
 #include "antlr4-runtime.h"
@@ -11,10 +12,12 @@ class CSubsetVisitorIMP : public CSubsetVisitor
 {
     SymbolTable &symbolTable;
     ofstream &logF;
+    ofstream &errF;
     antlr4::CommonTokenStream *tokenStream;
     int errorCount = 0;
+
 public:
-    CSubsetVisitorIMP(SymbolTable &st, ofstream &of, antlr4::CommonTokenStream *ts) : symbolTable(st), logF(of), tokenStream(ts) {}
+    CSubsetVisitorIMP(SymbolTable &st, ofstream &of, ofstream &ef, antlr4::CommonTokenStream *ts) : symbolTable(st), logF(of), errF(ef), tokenStream(ts) {}
 
     virtual std::any visitStart(CSubsetParser::StartContext *ctx) override
     {
@@ -75,17 +78,22 @@ public:
     {
         auto funcDefCtx = ctx->func_definition();
         string funcName;
+        TypeInfo returnType;
+        vector<TypeInfo> paramTypes;
 
         if (auto p = dynamic_cast<CSubsetParser::Func_definition_paramContext *>(funcDefCtx))
         {
             funcName = p->ID()->getText();
+            returnType = makeType(getType(p->type_specifier()->getText()), false, 0);
+            paramTypes = extractParamTypes(p->parameter_list());
         }
         else if (auto np = dynamic_cast<CSubsetParser::Func_definition_no_paramContext *>(funcDefCtx))
         {
             funcName = np->ID()->getText();
+            returnType = makeType(getType(np->type_specifier()->getText()), false, 0);
         }
 
-        symbolTable.insertSymbol(funcName, "ID");
+        symbolTable.insertSymbol(funcName, "ID", FunctionInfo{returnType, paramTypes, true});
         symbolTable.enterScope();
 
         auto temp = visitChildren(ctx);
@@ -105,8 +113,13 @@ public:
 
         string type = "ID";
         string ID = ctx->ID()->getText();
+        TypeInfo returnType;
+        vector<TypeInfo> paramTypes;
 
-        symbolTable.insertSymbol(ID, type);
+        returnType = makeType(getType(ctx->type_specifier()->getText()), false, 0);
+        paramTypes = extractParamTypes(ctx->parameter_list());
+
+        symbolTable.insertSymbol(ID, type, FunctionInfo{returnType, paramTypes, true});
 
         log(ctx->getStart()->getLine(), "func_declaration", "type_specifier ID LPAREN parameter_list RPAREN SEMICOLON");
         log2(getExactRuleText(ctx, tokenStream));
@@ -120,8 +133,11 @@ public:
 
         string type = "ID";
         string ID = ctx->ID()->getText();
+        TypeInfo returnType;
+        vector<TypeInfo> paramTypes;
 
-        symbolTable.insertSymbol(ID, type);
+        returnType = makeType(getType(ctx->type_specifier()->getText()), false, 0);
+        symbolTable.insertSymbol(ID, type, FunctionInfo{returnType, paramTypes, true});
 
         log(ctx->getStart()->getLine(), "func_declaration", "type_specifier ID LPAREN RPAREN SEMICOLON");
         log2(getExactRuleText(ctx, tokenStream));
@@ -156,7 +172,7 @@ public:
         string type = "ID";
         string ID = ctx->ID()->getText();
 
-        symbolTable.insertSymbol(ID, type);
+        symbolTable.insertSymbol(ID, type, makeType(getType(ctx->type_specifier()->getText()), false, 0));
 
         log(ctx->getStart()->getLine(), "parameter_list", "type_specifier ID");
         log2(getExactRuleText(ctx, tokenStream));
@@ -181,7 +197,7 @@ public:
         string type = "ID";
         string ID = ctx->ID()->getText();
 
-        symbolTable.insertSymbol(ID, type);
+        symbolTable.insertSymbol(ID, type, makeType(getType(ctx->type_specifier()->getText()), false, 0));
 
         log(ctx->getStart()->getLine(), "parameter_list", "parameter_list COMMA type_specifier ID");
         log2(getExactRuleText(ctx, tokenStream));
@@ -222,18 +238,22 @@ public:
     virtual std::any visitVar_declaration(CSubsetParser::Var_declarationContext *ctx) override
     {
         auto temp = visitChildren(ctx);
-        stringstream ss(ctx->declaration_list()->getText());
-        string id;
-        string type = "ID";
 
-        while (getline(ss, id, ','))
+        BaseType base = getType(ctx->type_specifier()->getText());
+        auto decls = extractDeclarations(ctx->declaration_list(), base);
+
+        for (auto &[id, type] : decls)
         {
-            symbolTable.insertSymbol(id, type);
+            if (!symbolTable.insertSymbol(id, "ID", type))
+            {
+                errF << "Line " << ctx->getStart()->getLine()
+                     << ": Multiple declaration of '" << id << "' in the same scope\n";
+                errorCount++;
+            }
         }
 
         log(ctx->getStart()->getLine(), "var_declaration", "type_specifier declaration_list SEMICOLON");
         log2(getExactRuleText(ctx, tokenStream));
-
         return temp;
     }
 
@@ -605,7 +625,7 @@ public:
         log(ctx->getStart()->getLine(), "factor", "CONST_INT");
         log2(getExactRuleText(ctx, tokenStream));
 
-        return temp;
+        return TypeInfo{BaseType::INT, false, 0};
     }
 
     virtual std::any visitFactor_five(CSubsetParser::Factor_fiveContext *ctx) override
@@ -615,7 +635,7 @@ public:
         log(ctx->getStart()->getLine(), "factor", "CONST_FLOAT");
         log2(getExactRuleText(ctx, tokenStream));
 
-        return temp;
+        return TypeInfo{BaseType::FLOAT, false, 0};
     }
 
     virtual std::any visitFactor_six(CSubsetParser::Factor_sixContext *ctx) override
@@ -676,6 +696,80 @@ public:
         log2(getExactRuleText(ctx, tokenStream));
 
         return temp;
+    }
+
+    BaseType getType(string str)
+    {
+        if (str == "INT")
+            return BaseType::INT;
+        else if (str == "FLOAT")
+            return BaseType::FLOAT;
+        else if (str == "VOID")
+            return BaseType::VOID;
+
+        return BaseType::UNKNOWN;
+    }
+
+    TypeInfo makeType(BaseType tp, bool isArray = false, int size = 0)
+    {
+        return TypeInfo{tp, isArray, size};
+    }
+
+    vector<TypeInfo> extractParamTypes(CSubsetParser::Parameter_listContext *ctx)
+    {
+        if (!ctx)
+            return {};
+
+        if (auto a = dynamic_cast<CSubsetParser::Paramlist_typespec_idContext *>(ctx))
+            return {makeType(getType(a->type_specifier()->getText()))};
+
+        if (auto a = dynamic_cast<CSubsetParser::ParamList_typespecContext *>(ctx))
+            return {makeType(getType(a->type_specifier()->getText()))};
+
+        if (auto a = dynamic_cast<CSubsetParser::Paramlist_comma_typespec_idContext *>(ctx))
+        {
+            auto types = extractParamTypes(a->parameter_list());
+            types.push_back(makeType(getType(a->type_specifier()->getText())));
+            return types;
+        }
+
+        if (auto a = dynamic_cast<CSubsetParser::Paramlist_comma_typespecContext *>(ctx))
+        {
+            auto types = extractParamTypes(a->parameter_list());
+            types.push_back(makeType(getType(a->type_specifier()->getText())));
+            return types;
+        }
+
+        return {};
+    }
+
+    vector<pair<string, TypeInfo>> extractDeclarations(CSubsetParser::Declaration_listContext *ctx, BaseType base)
+    {
+        if (auto a = dynamic_cast<CSubsetParser::Declaration_list_idContext *>(ctx))
+            return {{a->ID()->getText(), makeType(base, false)}};
+
+        if (auto a = dynamic_cast<CSubsetParser::Declaration_list_id_Context *>(ctx))
+        {
+            int size = stoi(a->CONST_INT()->getText());
+            return {{a->ID()->getText(), makeType(base, true, size)}};
+        }
+
+        if (auto a = dynamic_cast<CSubsetParser::Declaration_list_commaContext *>(ctx))
+        {
+            auto decls = extractDeclarations(a->declaration_list(), base);
+            decls.push_back({a->ID()->getText(), makeType(base, false)});
+            return decls;
+        }
+
+        if (auto a = dynamic_cast<CSubsetParser::Declaration_list_comma_id_Context *>(ctx))
+        {
+            auto decls = extractDeclarations(a->declaration_list(), base);
+            int size = stoi(a->CONST_INT()->getText());
+            decls.push_back({a->ID()->getText(), makeType(base, true, size)});
+            return decls;
+        }
+
+        return {};
     }
 
     void log(int lineNo, const string &ruleName, const string &expansion)

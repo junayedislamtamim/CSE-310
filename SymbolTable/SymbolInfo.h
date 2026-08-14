@@ -6,15 +6,46 @@
 
 using namespace std;
 
+enum class BaseType { INT, FLOAT, VOID, UNKNOWN };
+
+struct TypeInfo {
+    BaseType base = BaseType::UNKNOWN;
+    bool isArray = false;
+    int arraySize = 0;   
+
+    bool operator==(const TypeInfo& o) const {
+        return base == o.base && isArray == o.isArray;
+    }
+};
+
+struct FunctionInfo {
+    TypeInfo returnType;
+    vector<TypeInfo> paramTypes;
+    bool isDefined = false; 
+};
+
 class SymbolInfo
 {
 private:
     string symbolName, symbolType;
     SymbolInfo *next = nullptr;
     bool silent = false;
+    FunctionInfo fInfo;
+    TypeInfo tInfo;
+    bool isFunc = false;
 public:
     SymbolInfo() {}
-    SymbolInfo(const string&  symbolName, string symbolType, bool silent = false)
+    SymbolInfo(const string&  symbolName, string symbolType, bool silent = false, FunctionInfo fI)
+    : fInfo(fI)
+    {
+        this->symbolName = symbolName;
+        this->symbolType = symbolType;
+        this->silent = silent;
+        isFunc = true;
+    }
+
+    SymbolInfo(const string&  symbolName, string symbolType, bool silent = false, TypeInfo tI)
+    : tInfo(tI)
     {
         this->symbolName = symbolName;
         this->symbolType = symbolType;

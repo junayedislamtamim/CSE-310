@@ -26,6 +26,7 @@ int main(int argc, const char* argv[]) {
 
     SymbolTable symbolTable(SYMBOL_TABLE_SIZE, true);
     ofstream logF("output/log.txt");
+    ofstream errF("output/error.txt");
 
     ANTLRInputStream input(inputFile);
     CSubsetLexer lexer(&input);
@@ -34,7 +35,7 @@ int main(int argc, const char* argv[]) {
 
     CSubsetParser::StartContext* tree = parser.start();
 
-    CSubsetVisitorIMP visitor(symbolTable, logF, &tokens);
+    CSubsetVisitorIMP visitor(symbolTable, logF, errF, &tokens);
     visitor.visit(tree);
 
     cout << "Parsing completed." << endl;

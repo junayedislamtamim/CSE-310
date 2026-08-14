@@ -46,9 +46,14 @@ public:
         delete temp;
     }
 
-    bool insertSymbol(const string&  symbolName, string symbolType)
+    bool insertSymbol(const string&  symbolName, string symbolType, const TypeInfo& typeInfo)
     {
-        return currentScopeTable->insertSymbol(symbolName, symbolType);
+        return currentScopeTable->insertSymbol(symbolName, symbolType, typeInfo);
+    }
+
+    bool insertSymbol(const string&  symbolName, string symbolType, const FunctionInfo& functionInfo)
+    {
+        return currentScopeTable->insertSymbol(symbolName, symbolType, functionInfo);
     }
 
     bool deleteSymbol(const string&  symbolName, string symbolType = "")
