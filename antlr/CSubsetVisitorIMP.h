@@ -120,7 +120,7 @@ public:
     {
         auto temp = visitChildren(ctx);
 
-        log(ctx->getStart()->getLine(), "parameter_list", "parameter_list COMMA type_specifier ID");
+        log(ctx->getStart()->getLine(), "parameter_list", "type_specifier ID");
         log2(getExactRuleText(ctx, tokenStream));
 
         return temp;
@@ -130,7 +130,7 @@ public:
     {
         auto temp = visitChildren(ctx);
 
-        log(ctx->getStart()->getLine(), "parameter_list", "parameter_list COMMA type_specifier");
+        log(ctx->getStart()->getLine(), "parameter_list", "type_specifier");
         log2(getExactRuleText(ctx, tokenStream));
 
         return temp;
@@ -140,7 +140,7 @@ public:
     {
         auto temp = visitChildren(ctx);
 
-        log(ctx->getStart()->getLine(), "parameter_list", "type_specifier ID");
+        log(ctx->getStart()->getLine(), "parameter_list", "parameter_list COMMA type_specifier ID");
         log2(getExactRuleText(ctx, tokenStream));
 
         return temp;
@@ -150,7 +150,7 @@ public:
     {
         auto temp = visitChildren(ctx);
 
-        log(ctx->getStart()->getLine(), "parameter_list", "type_specifier");
+        log(ctx->getStart()->getLine(), "parameter_list", "parameter_list COMMA type_specifier");
         log2(getExactRuleText(ctx, tokenStream));
 
         return temp;
@@ -201,7 +201,7 @@ public:
         auto temp = visitChildren(ctx);
         string text = to_upper(ctx->getText());
 
-        log(ctx->getStart()->getLine(), "type_specifier", "text");
+        log(ctx->getStart()->getLine(), "type_specifier", text);
         log2(getExactRuleText(ctx, tokenStream));
 
         return temp;
@@ -639,7 +639,7 @@ public:
 
     void log(int lineNo, const string &ruleName, const string &expansion)
     {
-        logF << "Line " << lineNo << ": " << ruleName << ": " << expansion << "\n\n";
+        logF << "Line " << lineNo << ": " << ruleName << " : " << expansion << "\n\n";
     }
 
     void log2(const string &str)

@@ -15,7 +15,7 @@ public:
     SymbolTable(int n, bool silent = false)
     {
         bucketNumber = n;
-        currentScopeTable = new ScopeTable(bucketNumber, silent);
+        currentScopeTable = new ScopeTable(bucketNumber, nullptr, silent);
         this->silent = silent;
     }
 
@@ -33,8 +33,7 @@ public:
     void enterScope()
     {
         ScopeTable *prevScopeTable = currentScopeTable;
-        currentScopeTable = new ScopeTable(bucketNumber, silent);
-        currentScopeTable->setParentScope(prevScopeTable);
+        currentScopeTable = new ScopeTable(bucketNumber, prevScopeTable, silent);
     }
 
     void exitScope()

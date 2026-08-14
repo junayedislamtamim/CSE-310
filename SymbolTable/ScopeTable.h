@@ -8,22 +8,34 @@
 
 using namespace std;
 
-inline int unique_id_cnt = 1;
-
 class ScopeTable
 {
 private:
     ScopeTable* parentScope = nullptr;
+    int childrenCount = 0;
     SymbolInfo** hashTable = nullptr;
-    const int unique_id = unique_id_cnt++;
     int bucketNumber;
     bool silent = false;
+    string unique_id;
 public:
-    ScopeTable(int n, bool silent = false)
+    ScopeTable(int n, ScopeTable* parentScope, bool silent = false)
     {
         bucketNumber = n;
         hashTable = new SymbolInfo*[bucketNumber]{};
         this->silent = silent;
+        this->parentScope = parentScope; 
+         
+        if(parentScope != nullptr)
+        {
+            parentScope->childrenCount++;
+            unique_id += parentScope->unique_id;
+            unique_id += ("." + to_string(parentScope->getChildrenCount()));
+        }
+        else
+        {
+            unique_id = "1";
+        }
+
         if(!silent) cout << "   " << "ScopeTable# " << unique_id << " created\n";
     }
     
@@ -160,13 +172,14 @@ public:
         }
     }
 
-    void setParentScope(ScopeTable* parentScope)
-    {
-        this->parentScope = parentScope;
-    }
+    // void setParentScope(ScopeTable* parentScope)
+    // {
+    //     this->parentScope = parentScope;
+    // }
 
     ScopeTable* getParentScope() { return parentScope; }
     int getBucketNumber() { return bucketNumber; }
+    int getChildrenCount() { return childrenCount; }
 };
 
 #endif
