@@ -29,6 +29,7 @@ parameter_list
     | parameter_list COMMA type_specifier   #paramlist_comma_typespec
     | type_specifier ID #paramlist_typespec_id
     | type_specifier    #paramList_typespec
+    | type_specifier ADDOP #paramlist_typespec_baddash
     ;
 
 compound_statement
@@ -50,6 +51,7 @@ declaration_list
     | declaration_list COMMA ID LTHIRD CONST_INT RTHIRD #declaration_list_comma_id_
     | ID    #declaration_list_id
     | ID LTHIRD CONST_INT RTHIRD #declaration_list_id_
+    | ID ADDOP ID #declaration_list_id_baddash
     ;
 
 statements
@@ -72,6 +74,7 @@ statement
 expression_statement
     : SEMICOLON #expression_stmt_semicolon
     | expression SEMICOLON #expression_stmt_expr_semicolon
+    | expression #expression_stmt_missing_semi
     ;
 
 variable
@@ -87,6 +90,7 @@ expression
 logic_expression
     : rel_expression #logic_expression_one
     | rel_expression LOGICOP rel_expression #logic_expression_two
+    | rel_expression ADDOP ASSIGNOP #logic_expression_badop
     ;
 
 rel_expression

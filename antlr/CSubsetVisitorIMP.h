@@ -93,15 +93,38 @@ public:
             returnType = makeType(getType(np->type_specifier()->getText()), false, 0);
         }
 
-        if(!symbolTable.insertSymbol(funcName, "ID", make_shared<FunctionInfo>(returnType, paramTypes, true)))
+        SymbolInfo *prev = symbolTable.lookUp(funcName);
+        if (prev && prev->isFunction())
         {
-            errF << "Line " << ctx->getStart()->getLine()
-                 << ": Multiple declaration of parameter '" << funcName << "'\n";
+            auto prevFi = prev->getFuncInfo();
+
+            if (prevFi->paramTypes.size() != paramTypes.size())
+            {
+                errF << "Error at line " << ctx->getStart()->getLine()
+                     << ": Total number of arguments mismatch with declaration in function " << funcName << "\n\n";
+                errorCount++;
+            }
+
+            if (prevFi->returnType.base != returnType.base)
+            {
+                errF << "Error at line " << ctx->getStart()->getLine()
+                     << ": Return type mismatch with function declaration in function " << funcName << "\n\n";
+                errorCount++;
+            }
+        }
+        if (!symbolTable.insertSymbol(funcName, "ID", make_shared<FunctionInfo>(returnType, paramTypes, true)))
+        {
+            errF << "Error at line " << ctx->getStart()->getLine()
+                 << ": Multiple declaration of " << funcName << "\n\n";
         }
 
         symbolTable.enterScope();
 
         auto temp = visitChildren(ctx);
+
+        int pos = 0;
+        if (auto p = dynamic_cast<CSubsetParser::Func_definition_paramContext *>(funcDefCtx))
+            checkParamNames(p->parameter_list(), funcName, pos);
 
         log(ctx->getStart()->getLine(), "unit", "func_definition");
         log2(getExactRuleText(ctx, tokenStream));
@@ -122,11 +145,10 @@ public:
         returnType = makeType(getType(ctx->type_specifier()->getText()), false, 0);
         paramTypes = extractParamTypes(ctx->parameter_list());
 
-        
-        if(!symbolTable.insertSymbol(ID, "ID", make_shared<FunctionInfo>(returnType, paramTypes, false)))
+        if (!symbolTable.insertSymbol(ID, "ID", make_shared<FunctionInfo>(returnType, paramTypes, false)))
         {
-            errF << "Line " << ctx->getStart()->getLine()
-                 << ": Multiple declaration of parameter '" << ID << "'\n";
+            errF << "Error at line " << ctx->getStart()->getLine()
+                 << ": Multiple declaration of " << ID << "\n\n";
         }
 
         symbolTable.enterScope();
@@ -135,7 +157,7 @@ public:
 
         log(ctx->getStart()->getLine(), "func_declaration", "type_specifier ID LPAREN parameter_list RPAREN SEMICOLON");
         log2(getExactRuleText(ctx, tokenStream));
-        
+
         symbolTable.exitScope();
         return temp;
     }
@@ -148,10 +170,10 @@ public:
         vector<TypeInfo> paramTypes;
 
         returnType = makeType(getType(ctx->type_specifier()->getText()), false, 0);
-        if(!symbolTable.insertSymbol(ID, "ID", make_shared<FunctionInfo>(returnType, paramTypes, false)))
+        if (!symbolTable.insertSymbol(ID, "ID", make_shared<FunctionInfo>(returnType, paramTypes, false)))
         {
-            errF << "Line " << ctx->getStart()->getLine()
-                 << ": Multiple declaration of parameter '" << ID << "'\n";
+            errF << "Error at line " << ctx->getStart()->getLine()
+                 << ": Multiple declaration of " << ID << "\n\n";
         }
 
         symbolTable.enterScope();
@@ -194,8 +216,8 @@ public:
 
         if (!symbolTable.insertSymbol(ID, type, makeType(getType(ctx->type_specifier()->getText()), false, 0)))
         {
-            errF << "Line " << ctx->getStart()->getLine()
-                 << ": Multiple declaration of parameter '" << ID << "'\n";
+            errF << "Error at line " << ctx->getStart()->getLine()
+                 << ": Multiple declaration of " << ID << " in parameter\n\n";
             errorCount++;
         }
 
@@ -224,8 +246,8 @@ public:
 
         if (!symbolTable.insertSymbol(ID, type, makeType(getType(ctx->type_specifier()->getText()), false, 0)))
         {
-            errF << "Line " << ctx->getStart()->getLine()
-                 << ": Multiple declaration of parameter '" << ID << "'\n";
+            errF << "Error at line " << ctx->getStart()->getLine()
+                 << ": Multiple declaration of " << ID << " in parameter\n\n";
             errorCount++;
         }
 
@@ -276,8 +298,8 @@ public:
         {
             if (!symbolTable.insertSymbol(id, "ID", type))
             {
-                errF << "Line " << ctx->getStart()->getLine()
-                     << ": Multiple declaration of '" << id << "' in the same scope\n";
+                errF << "Error at line " << ctx->getStart()->getLine()
+                     << ": Multiple declaration of " << id << "\n\n";
                 errorCount++;
             }
         }
@@ -432,6 +454,15 @@ public:
     {
         auto temp = visitChildren(ctx);
 
+        string id = ctx->ID()->getText();
+        SymbolInfo *sym = symbolTable.lookUp(id);
+        if (!sym)
+        {
+            errF << "Error at line " << ctx->getStart()->getLine()
+                 << ": Undeclared variable " << id << "\n\n";
+            errorCount++;
+        }
+
         log(ctx->getStart()->getLine(), "statement", "PRINTLN LPAREN ID RPAREN SEMICOLON");
         log2(getExactRuleText(ctx, tokenStream));
 
@@ -476,12 +507,13 @@ public:
 
         if (!sym)
         {
-            errF << "Line " << ctx->getStart()->getLine() << ": Undeclared variable '" << id << "'\n";
+            errF << "Error at line " << ctx->getStart()->getLine()
+                 << ": Undeclared variable " << id << "\n\n";
             errorCount++;
         }
         else if (sym->isFunction())
         {
-            errF << "Line " << ctx->getStart()->getLine() << ": '" << id << "' is a function, used as variable\n";
+            errF << "Error at line " << ctx->getStart()->getLine() << ": " << id << " is a function, used as variable\n\n";
             errorCount++;
         }
         else
@@ -489,7 +521,7 @@ public:
             result = sym->getVarType();
             if (result.isArray)
             {
-                errF << "Line " << ctx->getStart()->getLine() << ": '" << id << "' is an array, used without index\n";
+                errF << "Error at line " << ctx->getStart()->getLine() << ": Type mismatch, " << id << " is an array\n\n";
                 errorCount++;
             }
         }
@@ -508,19 +540,19 @@ public:
         auto indexType = std::any_cast<TypeInfo>(visit(ctx->expression()));
         if (indexType.base != BaseType::UNKNOWN && indexType.base != BaseType::INT)
         {
-            errF << "Line " << ctx->getStart()->getLine()
-                 << ": Non-integer array index for '" << id << "'\n";
+            errF << "Error at line " << ctx->getStart()->getLine()
+                 << ": Expression inside third brackets not an integer\n\n";
             errorCount++;
         }
 
         if (!sym)
         {
-            errF << "Line " << ctx->getStart()->getLine() << ": Undeclared variable '" << id << "'\n";
+            errF << "Error at line " << ctx->getStart()->getLine() << ": Undeclared variable " << id << "\n\n";
             errorCount++;
         }
         else if (sym->isFunction())
         {
-            errF << "Line " << ctx->getStart()->getLine() << ": '" << id << "' is a function, used as variable\n";
+            errF << "Error at line " << ctx->getStart()->getLine() << ": " << id << " is a function, used as variable\n\n";
             errorCount++;
         }
         else
@@ -528,8 +560,8 @@ public:
             TypeInfo varType = sym->getVarType();
             if (!varType.isArray)
             {
-                errF << "Line " << ctx->getStart()->getLine()
-                     << ": '" << id << "' is not an array, indexed\n";
+                errF << "Error at line " << ctx->getStart()->getLine()
+                     << ": " << id << " is not an array\n\n";
                 errorCount++;
             }
             result = makeType(varType.base, false, 0);
@@ -557,13 +589,13 @@ public:
 
         if (lhs.base == BaseType::VOID || rhs.base == BaseType::VOID)
         {
-            errF << "Line " << ctx->getStart()->getLine() << ": Void type in assignment\n";
+            errF << "Error at line " << ctx->getStart()->getLine() << ": Void type in assignment\n\n";
             errorCount++;
         }
         else if (lhs.base == BaseType::INT && rhs.base == BaseType::FLOAT)
         {
-            errF << "Line " << ctx->getStart()->getLine()
-                 << ": Warning: assigning FLOAT to INT variable\n";
+            errF << "Error at line " << ctx->getStart()->getLine()
+                 << ": Type Mismatch\n\n";
         }
         else if (lhs.base == BaseType::FLOAT && rhs.base == BaseType::INT)
         {
@@ -571,7 +603,7 @@ public:
         }
         else if (lhs.base != BaseType::UNKNOWN && rhs.base != BaseType::UNKNOWN && lhs.base != rhs.base)
         {
-            errF << "Line " << ctx->getStart()->getLine() << ": Type mismatch in assignment\n";
+            errF << "Error at line " << ctx->getStart()->getLine() << ": Type mismatch\n\n";
             errorCount++;
         }
 
@@ -665,8 +697,15 @@ public:
 
         if (op == "%" && (lhs.base != BaseType::INT || rhs.base != BaseType::INT))
         {
-            errF << "Line " << ctx->getStart()->getLine()
-                 << ": Non-integer operand on modulus operator\n";
+            errF << "Error at line " << ctx->getStart()->getLine()
+                 << ": Non-integer operand on modulus operator\n\n";
+            errorCount++;
+        }
+
+        if ((op == "%" || op == "/") && isZeroLiteral(ctx->unary_expression()))
+        {
+            errF << "Error at line " << ctx->getStart()->getLine()
+                 << ": " << (op == "%" ? "Modulus" : "Division") << " by zero\n\n";
             errorCount++;
         }
 
@@ -727,12 +766,12 @@ public:
 
         if (!sym)
         {
-            errF << "Line " << ctx->getStart()->getLine() << ": Undeclared function '" << id << "'\n";
+            errF << "Error at line " << ctx->getStart()->getLine() << ": Undeclared function " << id << "\n\n";
             errorCount++;
         }
         else if (!sym->isFunction())
         {
-            errF << "Line " << ctx->getStart()->getLine() << ": '" << id << "' is not a function\n";
+            errF << "Error at line " << ctx->getStart()->getLine() << ": '" << id << "' is not a function\n";
             errorCount++;
         }
         else
@@ -740,8 +779,8 @@ public:
             auto fi = sym->getFuncInfo();
             if (fi->paramTypes.size() != argTypes.size())
             {
-                errF << "Line " << ctx->getStart()->getLine()
-                     << ": Total number of arguments mismatch in function '" << id << "'\n";
+                errF << "Error at line " << ctx->getStart()->getLine()
+                     << ": Total number of arguments mismatch in function " << id << "\n\n";
                 errorCount++;
             }
             else
@@ -749,16 +788,16 @@ public:
                 for (size_t i = 0; i < argTypes.size(); ++i)
                     if (fi->paramTypes[i].base != argTypes[i].base)
                     {
-                        errF << "Line " << ctx->getStart()->getLine()
-                             << ": Argument " << (i + 1) << " type mismatch in function '" << id << "'\n";
+                        errF << "Error at line " << ctx->getStart()->getLine()
+                             << ": " << (i + 1) << "th argument type mismatch in function " << id << "\n\n";
                         errorCount++;
                     }
             }
             result = fi->returnType;
-            if (result.base == BaseType::VOID)
+            if (result.base == BaseType::VOID && !isDiscardedCallResult(ctx))
             {
-                errF << "Line " << ctx->getStart()->getLine()
-                     << ": Void function '" << id << "' used in expression\n";
+                errF << "Error at line " << ctx->getStart()->getLine()
+                     << ": Void function used in expression\n\n";
                 errorCount++;
             }
         }
@@ -852,6 +891,50 @@ public:
         log2(getExactRuleText(ctx, tokenStream));
 
         return vector<TypeInfo>{t};
+    }
+
+    virtual std::any visitParamlist_typespec_baddash(CSubsetParser::Paramlist_typespec_baddashContext *ctx) override
+    {
+        errF << "Error at line " << ctx->getStart()->getLine()
+             << ": syntax error, unexpected token(s) '" << ctx->ADDOP()->getText() << "' before ')'\n\n";
+        errorCount++;
+        log(ctx->getStart()->getLine(), "parameter_list", "type_specifier ADDOP");
+        log2(getExactRuleText(ctx, tokenStream));
+        return (vector<TypeInfo> *)nullptr; // not used directly
+    }
+
+    virtual std::any visitDeclaration_list_id_baddash(CSubsetParser::Declaration_list_id_baddashContext *ctx) override
+    {
+        errF << "Error at line " << ctx->getStart()->getLine()
+             << ": syntax error, unexpected token(s) '" << ctx->ADDOP()->getText()
+             << " " << ctx->ID(1)->getText() << "' in declaration list\n\n";
+        errorCount++;
+        log(ctx->getStart()->getLine(), "declaration_list", "ID ADDOP ID");
+        log2(getExactRuleText(ctx, tokenStream));
+        return (void *)nullptr;
+    }
+
+    virtual std::any visitLogic_expression_badop(CSubsetParser::Logic_expression_badopContext *ctx) override
+    {
+        auto t = std::any_cast<TypeInfo>(visit(ctx->rel_expression()));
+        errF << "Error at line " << ctx->getStart()->getLine()
+             << ": syntax error, invalid operand '=' after '+'\n\n";
+        errorCount++;
+        log(ctx->getStart()->getLine(), "logic_expression", "rel_expression ADDOP ASSIGNOP");
+        log2(getExactRuleText(ctx, tokenStream));
+        return t;
+    }
+
+    virtual std::any visitExpression_stmt_missing_semi(CSubsetParser::Expression_stmt_missing_semiContext *ctx) override
+    {
+        auto temp = visit(ctx->expression());
+        errF << "Error at line " << ctx->getStart()->getLine()
+             << ": syntax error, missing ';' after expression '"
+             << getExactRuleText(ctx->expression(), tokenStream) << "'\n\n";
+        errorCount++;
+        log(ctx->getStart()->getLine(), "expression_statement", "expression (missing SEMICOLON)");
+        log2(getExactRuleText(ctx, tokenStream));
+        return temp;
     }
 
     BaseType getType(string str)
@@ -962,6 +1045,92 @@ public:
             ctx->getStop()->getStopIndex());
 
         return input->getText(interval);
+    }
+
+    bool isZeroLiteral(CSubsetParser::Unary_expressionContext *ctx)
+    {
+        try
+        {
+            double val = stod(ctx->getText());
+            return val == 0.0;
+        }
+        catch (...)
+        {
+            return false;
+        }
+    }
+
+    bool isDiscardedCallResult(CSubsetParser::Factor_twoContext *ctx)
+    {
+        antlr4::tree::ParseTree *node = ctx;
+        antlr4::tree::ParseTree *parent = node->parent;
+
+        if (!dynamic_cast<CSubsetParser::Unary_expression_threeContext *>(parent))
+            return false;
+        node = parent;
+        parent = node->parent;
+
+        if (!dynamic_cast<CSubsetParser::Term_oneContext *>(parent))
+            return false;
+        node = parent;
+        parent = node->parent;
+
+        if (!dynamic_cast<CSubsetParser::Simple_expression_oneContext *>(parent))
+            return false;
+        node = parent;
+        parent = node->parent;
+
+        if (!dynamic_cast<CSubsetParser::Rel_expression_oneContext *>(parent))
+            return false;
+        node = parent;
+        parent = node->parent;
+
+        if (!dynamic_cast<CSubsetParser::Logic_expression_oneContext *>(parent))
+            return false;
+        node = parent;
+        parent = node->parent;
+
+        if (!dynamic_cast<CSubsetParser::Expression_oneContext *>(parent))
+            return false;
+        node = parent;
+        parent = node->parent;
+
+        return dynamic_cast<CSubsetParser::Expression_stmt_expr_semicolonContext *>(parent) != nullptr;
+    }
+
+    void checkParamNames(CSubsetParser::Parameter_listContext *ctx, const string &funcName, int &pos)
+    {
+        if (!ctx)
+            return;
+        if (auto a = dynamic_cast<CSubsetParser::Paramlist_comma_typespec_idContext *>(ctx))
+        {
+            checkParamNames(a->parameter_list(), funcName, pos);
+            pos++;
+        }
+        else if (auto a = dynamic_cast<CSubsetParser::Paramlist_comma_typespecContext *>(ctx))
+        {
+            checkParamNames(a->parameter_list(), funcName, pos);
+            pos++;
+            errF << "Error at line " << a->getStart()->getLine() << ": " << pos
+                 << "th parameter's name not given in function definition of " << funcName << "\n\n";
+            errorCount++;
+        }
+        else if (dynamic_cast<CSubsetParser::Paramlist_typespec_idContext *>(ctx))
+            pos++;
+        else if (auto a = dynamic_cast<CSubsetParser::ParamList_typespecContext *>(ctx))
+        {
+            pos++;
+            errF << "Error at line " << a->getStart()->getLine() << ": " << pos
+                 << "th parameter's name not given in function definition of " << funcName << "\n\n";
+            errorCount++;
+        }
+        else if (auto a = dynamic_cast<CSubsetParser::Paramlist_typespec_baddashContext *>(ctx))
+        {
+            pos++;
+            errF << "Error at line " << a->getStart()->getLine() << ": " << pos
+                 << "th parameter's name not given in function definition of " << funcName << "\n\n";
+            errorCount++;
+        }
     }
 };
 
