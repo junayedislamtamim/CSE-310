@@ -15,7 +15,7 @@ public:
     SymbolTable(int n, bool silent = false)
     {
         bucketNumber = n;
-        currentScopeTable = new ScopeTable(bucketNumber, silent);
+        currentScopeTable = new ScopeTable(bucketNumber, nullptr, silent);
         this->silent = silent;
     }
 
@@ -33,8 +33,7 @@ public:
     void enterScope()
     {
         ScopeTable *prevScopeTable = currentScopeTable;
-        currentScopeTable = new ScopeTable(bucketNumber, silent);
-        currentScopeTable->setParentScope(prevScopeTable);
+        currentScopeTable = new ScopeTable(bucketNumber, prevScopeTable, silent);
     }
 
     void exitScope()
@@ -47,9 +46,14 @@ public:
         delete temp;
     }
 
-    bool insertSymbol(const string&  symbolName, string symbolType)
+    bool insertSymbol(const string&  symbolName, string symbolType, const TypeInfo& typeInfo)
     {
-        return currentScopeTable->insertSymbol(symbolName, symbolType);
+        return currentScopeTable->insertSymbol(symbolName, symbolType, typeInfo);
+    }
+
+    bool insertSymbol(const string&  symbolName, string symbolType, shared_ptr<FunctionInfo> functionInfo)
+    {
+        return currentScopeTable->insertSymbol(symbolName, symbolType, functionInfo);
     }
 
     bool deleteSymbol(const string&  symbolName, string symbolType = "")
@@ -74,24 +78,26 @@ public:
         return nullptr;
     }
 
-    void printCurrentScopeTable()
+    void printCurrentScopeTable(ostream& out = cout)
     {
         if (currentScopeTable == nullptr)
             return;
 
-        currentScopeTable->print();
+        currentScopeTable->print(out);
     }
 
-    void printAllScopeTables()
+    void printAllScopeTables(ostream& out = cout)
     {
         ScopeTable *head = currentScopeTable;
         string spacing = "  ";
         while (head != nullptr)
         {
-            head->print(spacing);
+            head->print(out, spacing);
             head = head->getParentScope();
             spacing += "    ";
         }
+
+        out << '\n';
     }
 };
 

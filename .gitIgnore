@@ -1,6 +1,0 @@
-main
-*.txt
-*.dSYM
-online*.cpp
-lex.yy.cc
-scanner

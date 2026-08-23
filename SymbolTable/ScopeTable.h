@@ -4,26 +4,39 @@
 #include <string>
 #include <cstdio>
 #include <iostream>
+#include <fstream>
 #include "SymbolInfo.h"
 
 using namespace std;
-
-int unique_id_counter = 1;
 
 class ScopeTable
 {
 private:
     ScopeTable* parentScope = nullptr;
+    int childrenCount = 0;
     SymbolInfo** hashTable = nullptr;
-    const int unique_id = unique_id_counter++;
     int bucketNumber;
     bool silent = false;
+    string unique_id;
 public:
-    ScopeTable(int n, bool silent = false)
+    ScopeTable(int n, ScopeTable* parentScope, bool silent = false)
     {
         bucketNumber = n;
         hashTable = new SymbolInfo*[bucketNumber]{};
         this->silent = silent;
+        this->parentScope = parentScope; 
+
+        if(parentScope != nullptr)
+        {
+            parentScope->childrenCount++;
+            unique_id += parentScope->unique_id;
+            unique_id += ("." + to_string(parentScope->getChildrenCount()));
+        }
+        else
+        {
+            unique_id = "1";
+        }
+
         if(!silent) cout << "   " << "ScopeTable# " << unique_id << " created\n";
     }
     
@@ -74,7 +87,7 @@ public:
         return head;
     }
 
-    bool insertSymbol(const string&  symbolName, string symbolType)
+    bool insertSymbol(const string&  symbolName, string symbolType, const TypeInfo& typeInfo)
     {
         int i = 1;
         if(symbolName.empty() || this->lookUpSymbol(symbolName) != nullptr)
@@ -96,11 +109,50 @@ public:
 
         if(head == nullptr)
         {
-            head = new SymbolInfo(symbolName, symbolType, silent);
+            head = new SymbolInfo(symbolName, symbolType,  typeInfo, silent);
             hashTable[hashBucket] = head;
         }
         else
-            head->setNext(new SymbolInfo(symbolName, symbolType, silent));
+            head->setNext(new SymbolInfo(symbolName, symbolType, typeInfo, silent));
+        
+        return true; 
+    }
+
+    bool insertSymbol(const string&  symbolName, string symbolType, shared_ptr<FunctionInfo> functionInfo)
+    {
+        int i = 1;
+        SymbolInfo* t = this->lookUpSymbol(symbolName);
+        if(symbolName.empty() || (t != nullptr))
+        {
+            if(t != nullptr && t->isFunction() && !t->isDefinedFunction() && functionInfo->isDefined)
+            {
+            //that means we are now providing a definition for a function we previously declared
+                t->defineFunction();
+                return true;
+            }
+
+            if(!silent) cout<< "    " << "Insertion Failed :" << (symbolName.empty() ? "Empty SymbolName" : "SymbolName already exists") <<"\n";
+            return false;
+        }
+        if(!silent) cout << "   " << "Inserted in ScopeTable# "<<unique_id<<" at position ";
+        int hashBucket = SDBMHash(symbolName);
+        SymbolInfo* head = hashTable[hashBucket];
+
+        while(head != nullptr && head->getNext() != nullptr)
+        {
+            head = head->getNext();
+            ++i;
+        }
+
+        if(!silent) cout << hashBucket + 1 << ", " << (head == nullptr ? i : i + 1) << "\n";
+
+        if(head == nullptr)
+        {
+            head = new SymbolInfo(symbolName, symbolType, functionInfo, silent);
+            hashTable[hashBucket] = head;
+        }
+        else
+            head->setNext(new SymbolInfo(symbolName, symbolType, functionInfo, silent));
         
         return true; 
     }
@@ -143,30 +195,26 @@ public:
         return true;
     }
 
-    void print(const string&  spacing = "   ")
+    void print(ostream& out = cout, const string&  spacing = "   ")
     {
-        if(!silent) cout << spacing << "ScopeTable# " << unique_id << "\n";
+        out << spacing << "ScopeTable# " << unique_id << "\n";
         for(int i =0; i < bucketNumber; ++i)
         {
             SymbolInfo* head = hashTable[i];
-            if(!silent) cout << spacing <<  i + 1 << "--> ";
+            if(hashTable[i] != nullptr) out << spacing <<  i + 1 << "--> ";
             while(head != nullptr)
             {
-                head->print();
+                head->print(out);
                 head = head->getNext();
             }
             
-            if(!silent) cout << '\n';
+            if(hashTable[i] != nullptr) out << '\n';
         }
-    }
-
-    void setParentScope(ScopeTable* parentScope)
-    {
-        this->parentScope = parentScope;
     }
 
     ScopeTable* getParentScope() { return parentScope; }
     int getBucketNumber() { return bucketNumber; }
+    int getChildrenCount() { return childrenCount; }
 };
 
 #endif
