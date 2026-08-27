@@ -2,6 +2,7 @@
 #define SYMBOL_TABLE
 
 #include <string>
+#include <memory>
 #include "ScopeTable.h"
 
 class SymbolTable
@@ -99,6 +100,9 @@ public:
 
         out << '\n';
     }
+
+    bool isGlobalScope() { return currentScopeTable->isGlobalScope(); }
+    int getVariableCount() { return currentScopeTable->getVariableCount(); }
 };
 
 #endif

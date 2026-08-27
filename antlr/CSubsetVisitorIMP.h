@@ -1,9 +1,11 @@
 #ifndef IMP
 #define IMP
 #include <vector>
+#include <sstream>
 #include "CSubsetVisitor.h"
 #include "../SymbolTable/SymbolTable.h"
 #include "antlr4-runtime.h"
+#include "../IGC-1/function.h"
 
 using namespace std;
 using namespace antlr4;
@@ -13,11 +15,14 @@ class CSubsetVisitorIMP : public CSubsetVisitor
     SymbolTable &symbolTable;
     ofstream &logF;
     ofstream &errF;
+    ofstream &outF;
+    stringstream data;
+    stringstream code;
     antlr4::CommonTokenStream *tokenStream;
     int errorCount = 0;
 
 public:
-    CSubsetVisitorIMP(SymbolTable &st, ofstream &of, ofstream &ef, antlr4::CommonTokenStream *ts) : symbolTable(st), logF(of), errF(ef), tokenStream(ts) {}
+    CSubsetVisitorIMP(SymbolTable &st, ofstream &of, ofstream &ef, ofstream &outf, antlr4::CommonTokenStream *ts) : symbolTable(st), logF(of), errF(ef), outF(outf), tokenStream(ts) {}
 
     virtual std::any visitStart(CSubsetParser::StartContext *ctx) override
     {
@@ -31,6 +36,9 @@ public:
 
         logF << "Total lines: " << ctx->getStop()->getLine() << '\n';
         logF << "Total errors: " << errorCount << '\n';
+
+        init(outF, data, code);
+
         return temp;
     }
 
@@ -120,7 +128,11 @@ public:
 
         symbolTable.enterScope();
 
+        beginFunc(code, {funcName, make_shared<FunctionInfo>(returnType, paramTypes, true)});
+
         auto temp = visitChildren(ctx);
+
+        endFunc(code, {funcName, make_shared<FunctionInfo>(returnType, paramTypes, true)}, symbolTable.getVariableCount());
 
         int pos = 0;
         if (auto p = dynamic_cast<CSubsetParser::Func_definition_paramContext *>(funcDefCtx))
@@ -269,20 +281,38 @@ public:
 
     virtual std::any visitCompound_statement_statements(CSubsetParser::Compound_statement_statementsContext *ctx) override
     {
+        bool isFunctionBody = dynamic_cast<CSubsetParser::Func_definition_paramContext*>(ctx->parent) != nullptr
+                            || dynamic_cast<CSubsetParser::Func_definition_no_paramContext*>(ctx->parent) != nullptr;
+        
+        if(!isFunctionBody)
+            symbolTable.enterScope();
+
         auto temp = visitChildren(ctx);
 
         log(ctx->getStart()->getLine(), "compound_statement", "LCURL statements RCURL");
         log2(getExactRuleText(ctx, tokenStream));
+
+        if(!isFunctionBody)
+            symbolTable.exitScope();
 
         return temp;
     }
 
     virtual std::any visitCompound_statement_nostatement(CSubsetParser::Compound_statement_nostatementContext *ctx) override
     {
+        bool isFunctionBody = dynamic_cast<CSubsetParser::Func_definition_paramContext*>(ctx->parent) != nullptr
+                            || dynamic_cast<CSubsetParser::Func_definition_no_paramContext*>(ctx->parent) != nullptr;
+        
+        if(!isFunctionBody)
+            symbolTable.enterScope();
+
         auto temp = visitChildren(ctx);
 
         log(ctx->getStart()->getLine(), "compound_statement", "LCURL RCURL");
         log2(getExactRuleText(ctx, tokenStream));
+
+        if(!isFunctionBody)
+            symbolTable.exitScope();
 
         return temp;
     }
@@ -301,6 +331,11 @@ public:
                 errF << "Error at line " << ctx->getStart()->getLine()
                      << ": Multiple declaration of " << id << "\n\n";
                 errorCount++;
+            }
+
+            if(symbolTable.isGlobalScope())
+            {
+                insertData(data, {id, type});
             }
         }
 

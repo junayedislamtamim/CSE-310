@@ -215,6 +215,23 @@ public:
     ScopeTable* getParentScope() { return parentScope; }
     int getBucketNumber() { return bucketNumber; }
     int getChildrenCount() { return childrenCount; }
+    bool isGlobalScope() { return parentScope == nullptr; }
+    int getVariableCount() 
+    {
+        int cnt = 0;
+        for(int i =0; i < bucketNumber; ++i)
+        {
+            SymbolInfo* head = hashTable[i];
+            while(head != nullptr)
+            {
+                if(!head->isFunction()) 
+                    ++cnt;
+                head = head->getNext();
+            }
+        }
+
+        return cnt;
+    }
 };
 
 #endif
