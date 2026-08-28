@@ -117,4 +117,21 @@ void logicOR(stringstream &ss, int& labelCounter, const string &op1, const strin
     ss << endLabel << ":\n";
 }
 
+void relOP(stringstream& ss, const string& relop, const string& op1, const string& op2)
+{
+    ss << spacing << "MOV EDX, " << op1 << "\n";
+    ss << spacing << "MOV ECX, " << op2 << "\n";
+    ss << spacing << "CMP EDX, ECX\n";
+
+    ss << spacing;
+    if(relop == "<=") ss << "SETLE";
+    else if(relop == "==") ss << "SETE";
+    else if(relop == ">=") ss << "SETGE";
+    else if(relop == ">") ss << "SETG";
+    else if(relop == "<") ss << "SETL";
+    else if(relop == "!=") ss << "SETNE";
+    ss << " AL\n";
+    ss << "MOVZX EAX, AL\n";
+}
+
 #endif

@@ -709,7 +709,11 @@ public:
     virtual std::any visitRel_expression_two(CSubsetParser::Rel_expression_twoContext *ctx) override
     {
         visit(ctx->simple_expression(0));
+        body << "   PUSH EAX\n"; 
         visit(ctx->simple_expression(1));
+        body << "   POP EBX\n";
+
+        relOP(body, ctx->RELOP()->getText(), "EBX", "EAX");
 
         log(ctx->getStart()->getLine(), "rel_expression", "simple_expression RELOP simple_expression");
         log2(getExactRuleText(ctx, tokenStream));
