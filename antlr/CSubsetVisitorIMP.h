@@ -22,6 +22,7 @@ class CSubsetVisitorIMP : public CSubsetVisitor
     antlr4::CommonTokenStream *tokenStream;
     int errorCount = 0;
     int currentStackOffset = 0;
+    int labelCounter = 0;
 
 public:
     CSubsetVisitorIMP(SymbolTable &st, ofstream &of, ofstream &ef, ofstream &outf, antlr4::CommonTokenStream *ts) : symbolTable(st), logF(of), errF(ef), outF(outf), tokenStream(ts) {}
@@ -662,6 +663,8 @@ public:
         log(ctx->getStart()->getLine(), "expression", "variable ASSIGNOP logic_expression");
         log2(getExactRuleText(ctx, tokenStream));
 
+        printOP(body, "MOV", getName(ctx->variable()->getText(), lhs), "EAX" );
+
         return lhs;
     }
 
@@ -678,7 +681,14 @@ public:
     virtual std::any visitLogic_expression_two(CSubsetParser::Logic_expression_twoContext *ctx) override
     {
         visit(ctx->rel_expression(0));
+        body << "   PUSH EAX\n"; 
         visit(ctx->rel_expression(1));
+        body << "   POP EBX\n";
+
+        if(ctx->LOGICOP()->getText() == "&&")
+            logicAND(body, labelCounter, "EBX", "EAX");
+        else
+            logicOR(body, labelCounter, "EBX", "EAX");
 
         log(ctx->getStart()->getLine(), "logic_expression", "rel_expression LOGICOP rel_expression");
         log2(getExactRuleText(ctx, tokenStream));
@@ -1191,7 +1201,7 @@ public:
         }
     }
 
-    string addressOf(const string& id, TypeInfo& t)
+    string getName(const string& id, TypeInfo& t)
     {
         if (t.isGlobal)
             return "[" + id + "]";
