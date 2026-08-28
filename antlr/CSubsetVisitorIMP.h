@@ -762,7 +762,9 @@ public:
     virtual std::any visitTerm_two(CSubsetParser::Term_twoContext *ctx) override
     {
         auto lhs = std::any_cast<TypeInfo>(visit(ctx->term()));
+        body << "   PUSH EAX\n"; 
         auto rhs = std::any_cast<TypeInfo>(visit(ctx->unary_expression()));
+        body << "   POP EBX\n";
         string op = ctx->MULOP()->getText();
 
         if (op == "%" && (lhs.base != BaseType::INT || rhs.base != BaseType::INT))
@@ -778,6 +780,8 @@ public:
                  << ": " << (op == "%" ? "Modulus" : "Division") << " by zero\n\n";
             errorCount++;
         }
+
+        mulOP(body, op);
 
         log(ctx->getStart()->getLine(), "term", "term MULOP unary_expression");
         log2(getExactRuleText(ctx, tokenStream));

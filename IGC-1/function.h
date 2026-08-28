@@ -149,4 +149,23 @@ void addOP(stringstream& ss, const string& addOP, const string& op1, const strin
     ss << spacing << "MOV EAX, EDX\n";
 }
 
+//always gets called like EBX MULOP EAX, the result is in EAX
+void mulOP(stringstream& ss, const string& mulOP)
+{
+    ss << spacing << "XCHG EAX, EBX\n";
+
+    if (mulOP == "*") {
+        ss << spacing << "IMUL EAX, EBX\n";
+    } 
+    else if (mulOP == "/") {
+        ss << spacing << "CDQ\n";
+        ss << spacing << "IDIV EBX\n";  // Result (quotient) is automatically in EAX
+    } 
+    else if (mulOP == "%") {
+        ss << spacing << "CDQ\n";
+        ss << spacing << "IDIV EBX\n";
+        ss << spacing << "MOV EAX, EDX\n"; // Move remainder to EAX
+    }
+}
+
 #endif
