@@ -8,6 +8,9 @@ string spacing = "    ";
 
 void init(ofstream &out, stringstream &data, stringstream &code)
 {
+    // 1. Declare buffer in the writeable data segment
+    data << "    println_buffer rb 12\n"; // Reserve 12 bytes for 10 digits, sign, newline
+
     out << "format ELF executable 3\n";
     out << "entry main\n";
     out << "\n";
@@ -17,10 +20,61 @@ void init(ofstream &out, stringstream &data, stringstream &code)
     out << "\n\n";
 
     out << "segment readable executable\n";
-    out << "main: \n";
+
+    out << "println:\n";
+    out << "    PUSH EBP\n";
+    out << "    MOV EBP, ESP\n";
+    out << "    PUSH EBX\n";
+    out << "    PUSH ECX\n";
+    out << "    PUSH EDX\n";
+    out << "    PUSH ESI\n";
+    out << "\n";
+    out << "    MOV ESI, println_buffer + 11\n"; // Point ESI to end of buffer
+    out << "    MOV BYTE [ESI], 10\n";           // Append ASCII newline '\n' (10)
+    out << "    MOV EBX, EAX\n";                 // Store copy to check sign later
+    out << "    MOV ECX, 10\n";                  // Divisor = 10
+    out << "\n";
+    out << "    CMP EAX, 0\n";
+    out << "    JGE .convert_loop\n";
+    out << "    NEG EAX\n";                      // Make positive for digit extraction
+    out << "\n";
+    out << ".convert_loop:\n";
+    out << "    XOR EDX, EDX\n";
+    out << "    DIV ECX\n";                      // EAX = quotient, EDX = remainder
+    out << "    ADD DL, '0'\n";                  // Convert remainder to ASCII digit
+    out << "    DEC ESI\n";
+    out << "    MOV [ESI], DL\n";
+    out << "    TEST EAX, EAX\n";
+    out << "    JNZ .convert_loop\n";
+    out << "\n";
+    out << "    CMP EBX, 0\n";
+    out << "    JGE .do_print\n";
+    out << "    DEC ESI\n";
+    out << "    MOV BYTE [ESI], '-'\n";          // Prepend '-' if original number was negative
+    out << "\n";
+    out << ".do_print:\n";
+    out << "    ; Calculate string length = (println_buffer + 12) - ESI\n";
+    out << "    MOV EDX, println_buffer + 12\n";
+    out << "    SUB EDX, ESI\n";                 // EDX = byte count
+    out << "    MOV ECX, ESI\n";                 // ECX = buffer address
+    out << "    MOV EBX, 1\n";                   // EBX = 1 (stdout)
+    out << "    MOV EAX, 4\n";                   // EAX = 4 (sys_write)
+    out << "    INT 0x80\n";                     // Execute system call
+    out << "\n";
+    out << "    POP ESI\n";
+    out << "    POP EDX\n";
+    out << "    POP ECX\n";
+    out << "    POP EBX\n";
+    out << "    MOV ESP, EBP\n";
+    out << "    POP EBP\n";
+    out << "    RET\n\n";
+
+    // --- Main Program Entry ---
+    out << "main:\n";
     out << code.str();
     out << "\n";
 
+    // Exit program (sys_exit)
     out << "    MOV EAX, 1\n";
     out << "    XOR EBX, EBX\n";
     out << "    INT 0x80\n";
@@ -47,7 +101,7 @@ void beginFunc(stringstream &ss, pair<string, shared_ptr<FunctionInfo>> a, int v
     // if the function has no params
     if (a.second->paramTypes.size() == 0)
     {
-        ss << a.first << ":\n"; // print the label
+        ss << a.first << "_:\n"; // print the label
         ss << "    " << "PUSH " << "EBP\n";
         ss << spacing << "MOV EBP, ESP\n";
         ss << spacing << "SUB ESP, " << variableCount * 4 << "\n";

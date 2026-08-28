@@ -22,6 +22,7 @@ class CSubsetVisitorIMP : public CSubsetVisitor
     antlr4::CommonTokenStream *tokenStream;
     int errorCount = 0;
     int currentStackOffset = 0;
+    string currentFunctionName = "";
     int labelCounter = 0;
 
 public:
@@ -130,6 +131,8 @@ public:
         }
 
         currentStackOffset = 0;
+        string previous = currentFunctionName;
+        currentFunctionName = funcName;
         symbolTable.enterScope();
 
         auto temp = visitChildren(ctx);
@@ -151,6 +154,7 @@ public:
         symbolTable.printAllScopeTables(logF);
         symbolTable.exitScope();
         currentStackOffset = 0;
+        currentFunctionName = previous;
 
         return temp;
     }
@@ -515,6 +519,12 @@ public:
                  << ": Undeclared variable " << id << "\n\n";
             errorCount++;
         }
+        if(sym != nullptr)
+        {
+            TypeInfo t = sym->getVarType();
+            body << spacing << "MOV EAX, " << getName(id, t) << "\n";
+            body << spacing << "CALL println\n";
+        }
 
         log(ctx->getStart()->getLine(), "statement", "PRINTLN LPAREN ID RPAREN SEMICOLON");
         log2(getExactRuleText(ctx, tokenStream));
@@ -526,6 +536,7 @@ public:
     {
         auto temp = visitChildren(ctx);
 
+        body << "   " << "JMP " << currentFunctionName << "_exit\n";
         log(ctx->getStart()->getLine(), "statement", "RETURN expression SEMICOLON");
         log2(getExactRuleText(ctx, tokenStream));
 
@@ -911,8 +922,14 @@ public:
         log(ctx->getStart()->getLine(), "factor", "CONST_FLOAT");
         log2(getExactRuleText(ctx, tokenStream));
 
-        //cannot load float directly like this, needs attention
-        body << "   " << "MOV EAX, " << ctx->CONST_FLOAT()->getText() << "\n";
+        /*
+        / FLOAT TYPE SPECIFIER WAS OUT OF THE SCOPE OF IGC-1
+        / HENCE FLOATING POINT ARITHMETIC WASNT THOUGHT OF WHILE DESIGNING
+        / HOPEFULLY WILL BE HANDLED IN IGC-2 
+        */
+
+        int truncated = static_cast<int>(stod(ctx->CONST_FLOAT()->getText()));
+        body << "   " << "MOV EAX, " << truncated << "\n";
         return makeType(BaseType::FLOAT);
     }
 
@@ -920,8 +937,15 @@ public:
     {
         auto t = std::any_cast<TypeInfo>(visit(ctx->variable()));
 
+        string id;
+
+        auto p = dynamic_cast<CSubsetParser::Variable_oneContext*>(ctx->variable());
+        if(p != nullptr)
+            id = p->ID()->getText();
+        
         //variable must be in EAX
         inc(body, ctx->INCOP()->getText());
+        body << "   " << "MOV " << getName(id, t) << ", EAX\n";
         log(ctx->getStart()->getLine(), "factor", "variable INCOP");
         log2(getExactRuleText(ctx, tokenStream));
 
@@ -932,8 +956,15 @@ public:
     {
         auto t = std::any_cast<TypeInfo>(visit(ctx->variable()));
 
+        string id;
+
+        auto p = dynamic_cast<CSubsetParser::Variable_oneContext*>(ctx->variable());
+        if(p != nullptr)
+            id = p->ID()->getText();
+        
         //variable must be in EAX
         inc(body, ctx->DECOP()->getText());
+        body << "   " << "MOV " << getName(id, t) << ", EAX\n";
         log(ctx->getStart()->getLine(), "factor", "variable DECOP");
         log2(getExactRuleText(ctx, tokenStream));
 
@@ -1228,9 +1259,9 @@ public:
     string getName(const string& id, TypeInfo& t)
     {
         if (t.isGlobal)
-            return "[" + id + "]";
+            return "DWORD [" + id + "]";
         string off = (t.stackOffset >= 0 ? "+" + to_string(t.stackOffset) : to_string(t.stackOffset));
-        return "[EBP" + off + "]";
+        return "DWORD [EBP" + off + "]";
     }
 };
 
