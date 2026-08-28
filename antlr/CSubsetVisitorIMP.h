@@ -18,8 +18,10 @@ class CSubsetVisitorIMP : public CSubsetVisitor
     ofstream &outF;
     stringstream data;
     stringstream code;
+    stringstream body;
     antlr4::CommonTokenStream *tokenStream;
     int errorCount = 0;
+    int currentStackOffset = 0;
 
 public:
     CSubsetVisitorIMP(SymbolTable &st, ofstream &of, ofstream &ef, ofstream &outf, antlr4::CommonTokenStream *ts) : symbolTable(st), logF(of), errF(ef), outF(outf), tokenStream(ts) {}
@@ -128,11 +130,14 @@ public:
 
         symbolTable.enterScope();
 
-        beginFunc(code, {funcName, make_shared<FunctionInfo>(returnType, paramTypes, true)});
-
         auto temp = visitChildren(ctx);
 
+        beginFunc(code, {funcName, make_shared<FunctionInfo>(returnType, paramTypes, true)}, symbolTable.getVariableCount());
+        code << body.str();
         endFunc(code, {funcName, make_shared<FunctionInfo>(returnType, paramTypes, true)}, symbolTable.getVariableCount());
+
+        body.str("");
+        body.clear();
 
         int pos = 0;
         if (auto p = dynamic_cast<CSubsetParser::Func_definition_paramContext *>(funcDefCtx))
@@ -143,6 +148,7 @@ public:
 
         symbolTable.printAllScopeTables(logF);
         symbolTable.exitScope();
+        currentStackOffset = 0;
 
         return temp;
     }
@@ -284,8 +290,13 @@ public:
         bool isFunctionBody = dynamic_cast<CSubsetParser::Func_definition_paramContext*>(ctx->parent) != nullptr
                             || dynamic_cast<CSubsetParser::Func_definition_no_paramContext*>(ctx->parent) != nullptr;
         
+        int oldOffset;
+
         if(!isFunctionBody)
+        {
+            oldOffset = currentStackOffset;
             symbolTable.enterScope();
+        }
 
         auto temp = visitChildren(ctx);
 
@@ -293,7 +304,10 @@ public:
         log2(getExactRuleText(ctx, tokenStream));
 
         if(!isFunctionBody)
+        {
+            currentStackOffset = oldOffset;
             symbolTable.exitScope();
+        }
 
         return temp;
     }
@@ -336,6 +350,10 @@ public:
             if(symbolTable.isGlobalScope())
             {
                 insertData(data, {id, type});
+            }
+            else
+            {
+                // do nothing, handled inside extractDeclaration function
             }
         }
 
@@ -984,9 +1002,9 @@ public:
         return BaseType::UNKNOWN;
     }
 
-    TypeInfo makeType(BaseType tp, bool isArray = false, int size = 0)
+    TypeInfo makeType(BaseType tp, int stackOffset = 0, bool isArray = false, int size = 0)
     {
-        return TypeInfo{tp, isArray, size};
+        return TypeInfo{tp, isArray, size, stackOffset};
     }
 
     vector<TypeInfo> extractParamTypes(CSubsetParser::Parameter_listContext *ctx)
@@ -1020,18 +1038,23 @@ public:
     vector<pair<string, TypeInfo>> extractDeclarations(CSubsetParser::Declaration_listContext *ctx, BaseType base)
     {
         if (auto a = dynamic_cast<CSubsetParser::Declaration_list_idContext *>(ctx))
-            return {{a->ID()->getText(), makeType(base, false)}};
+        {
+            currentStackOffset -= 4;
+            return {{a->ID()->getText(), makeType(base, currentStackOffset, false)}};
+        }
 
         if (auto a = dynamic_cast<CSubsetParser::Declaration_list_id_Context *>(ctx))
         {
             int size = stoi(a->CONST_INT()->getText());
-            return {{a->ID()->getText(), makeType(base, true, size)}};
+            currentStackOffset -= size * 4;
+            return {{a->ID()->getText(), makeType(base, currentStackOffset, true, size)}};
         }
 
         if (auto a = dynamic_cast<CSubsetParser::Declaration_list_commaContext *>(ctx))
         {
             auto decls = extractDeclarations(a->declaration_list(), base);
-            decls.push_back({a->ID()->getText(), makeType(base, false)});
+            currentStackOffset -= 4;
+            decls.push_back({a->ID()->getText(), makeType(base, currentStackOffset, false)});
             return decls;
         }
 
@@ -1039,7 +1062,8 @@ public:
         {
             auto decls = extractDeclarations(a->declaration_list(), base);
             int size = stoi(a->CONST_INT()->getText());
-            decls.push_back({a->ID()->getText(), makeType(base, true, size)});
+            currentStackOffset -= size * 4;
+            decls.push_back({a->ID()->getText(), makeType(base, currentStackOffset, true, size)});
             return decls;
         }
 

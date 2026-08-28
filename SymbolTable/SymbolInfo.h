@@ -12,7 +12,8 @@ enum class BaseType { INT, FLOAT, VOID, UNKNOWN };
 struct TypeInfo {
     BaseType base = BaseType::UNKNOWN;
     bool isArray = false;
-    int arraySize = 0;   
+    int arraySize = 0; 
+    int stackOffset = 0;  
 
     bool operator==(const TypeInfo& o) const {
         return base == o.base && isArray == o.isArray;
