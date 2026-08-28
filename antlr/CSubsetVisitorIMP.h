@@ -724,10 +724,14 @@ public:
     virtual std::any visitSimple_expression_two(CSubsetParser::Simple_expression_twoContext *ctx) override
     {
         auto lhs = std::any_cast<TypeInfo>(visit(ctx->simple_expression()));
+        body << "   PUSH EAX\n"; 
         auto rhs = std::any_cast<TypeInfo>(visit(ctx->term()));
+        body << "   POP EBX\n";
 
         log(ctx->getStart()->getLine(), "simple_expression", "simple_expression ADDOP term");
         log2(getExactRuleText(ctx, tokenStream));
+
+        addOP(body, ctx->ADDOP()->getText(), "EBX", "EAX");
 
         return (lhs.base == BaseType::FLOAT || rhs.base == BaseType::FLOAT)
                    ? makeType(BaseType::FLOAT)

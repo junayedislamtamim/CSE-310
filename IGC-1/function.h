@@ -134,4 +134,19 @@ void relOP(stringstream& ss, const string& relop, const string& op1, const strin
     ss << "MOVZX EAX, AL\n";
 }
 
+void addOP(stringstream& ss, const string& addOP, const string& op1, const string& op2)
+{
+    ss << spacing << "MOV EDX, " << op1 << "\n";
+    ss << spacing << "MOV ECX, " << op2 << "\n";
+    
+    ss << spacing;
+    if(addOP == "+")
+        ss << "ADD";
+    else if(addOP == "-")
+        ss << "SUB";
+    
+    ss << " EDX, ECX\n";
+    ss << spacing << "MOV EAX, EDX\n";
+}
+
 #endif
