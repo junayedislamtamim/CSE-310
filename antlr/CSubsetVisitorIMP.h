@@ -128,6 +128,7 @@ public:
                  << ": Multiple declaration of " << funcName << "\n\n";
         }
 
+        currentStackOffset = 0;
         symbolTable.enterScope();
 
         auto temp = visitChildren(ctx);
@@ -287,12 +288,11 @@ public:
 
     virtual std::any visitCompound_statement_statements(CSubsetParser::Compound_statement_statementsContext *ctx) override
     {
-        bool isFunctionBody = dynamic_cast<CSubsetParser::Func_definition_paramContext*>(ctx->parent) != nullptr
-                            || dynamic_cast<CSubsetParser::Func_definition_no_paramContext*>(ctx->parent) != nullptr;
-        
+        bool isFunctionBody = dynamic_cast<CSubsetParser::Func_definition_paramContext *>(ctx->parent) != nullptr || dynamic_cast<CSubsetParser::Func_definition_no_paramContext *>(ctx->parent) != nullptr;
+
         int oldOffset;
 
-        if(!isFunctionBody)
+        if (!isFunctionBody)
         {
             oldOffset = currentStackOffset;
             symbolTable.enterScope();
@@ -303,7 +303,7 @@ public:
         log(ctx->getStart()->getLine(), "compound_statement", "LCURL statements RCURL");
         log2(getExactRuleText(ctx, tokenStream));
 
-        if(!isFunctionBody)
+        if (!isFunctionBody)
         {
             currentStackOffset = oldOffset;
             symbolTable.exitScope();
@@ -314,10 +314,9 @@ public:
 
     virtual std::any visitCompound_statement_nostatement(CSubsetParser::Compound_statement_nostatementContext *ctx) override
     {
-        bool isFunctionBody = dynamic_cast<CSubsetParser::Func_definition_paramContext*>(ctx->parent) != nullptr
-                            || dynamic_cast<CSubsetParser::Func_definition_no_paramContext*>(ctx->parent) != nullptr;
-        
-        if(!isFunctionBody)
+        bool isFunctionBody = dynamic_cast<CSubsetParser::Func_definition_paramContext *>(ctx->parent) != nullptr || dynamic_cast<CSubsetParser::Func_definition_no_paramContext *>(ctx->parent) != nullptr;
+
+        if (!isFunctionBody)
             symbolTable.enterScope();
 
         auto temp = visitChildren(ctx);
@@ -325,7 +324,7 @@ public:
         log(ctx->getStart()->getLine(), "compound_statement", "LCURL RCURL");
         log2(getExactRuleText(ctx, tokenStream));
 
-        if(!isFunctionBody)
+        if (!isFunctionBody)
             symbolTable.exitScope();
 
         return temp;
@@ -347,7 +346,7 @@ public:
                 errorCount++;
             }
 
-            if(symbolTable.isGlobalScope())
+            if (symbolTable.isGlobalScope())
             {
                 insertData(data, {id, type});
             }
@@ -1002,9 +1001,9 @@ public:
         return BaseType::UNKNOWN;
     }
 
-    TypeInfo makeType(BaseType tp, int stackOffset = 0, bool isArray = false, int size = 0)
+    TypeInfo makeType(BaseType tp, bool isGlobal = false, int stackOffset = 0, bool isArray = false, int size = 0)
     {
-        return TypeInfo{tp, isArray, size, stackOffset};
+        return TypeInfo{tp, isArray, size, stackOffset, isGlobal};
     }
 
     vector<TypeInfo> extractParamTypes(CSubsetParser::Parameter_listContext *ctx)
@@ -1040,21 +1039,21 @@ public:
         if (auto a = dynamic_cast<CSubsetParser::Declaration_list_idContext *>(ctx))
         {
             currentStackOffset -= 4;
-            return {{a->ID()->getText(), makeType(base, currentStackOffset, false)}};
+            return {{a->ID()->getText(), makeType(base, symbolTable.isGlobalScope(), currentStackOffset, false)}};
         }
 
         if (auto a = dynamic_cast<CSubsetParser::Declaration_list_id_Context *>(ctx))
         {
             int size = stoi(a->CONST_INT()->getText());
             currentStackOffset -= size * 4;
-            return {{a->ID()->getText(), makeType(base, currentStackOffset, true, size)}};
+            return {{a->ID()->getText(), makeType(base, symbolTable.isGlobalScope(), currentStackOffset, true, size)}};
         }
 
         if (auto a = dynamic_cast<CSubsetParser::Declaration_list_commaContext *>(ctx))
         {
             auto decls = extractDeclarations(a->declaration_list(), base);
             currentStackOffset -= 4;
-            decls.push_back({a->ID()->getText(), makeType(base, currentStackOffset, false)});
+            decls.push_back({a->ID()->getText(), makeType(base, symbolTable.isGlobalScope(), currentStackOffset, false)});
             return decls;
         }
 
@@ -1063,7 +1062,7 @@ public:
             auto decls = extractDeclarations(a->declaration_list(), base);
             int size = stoi(a->CONST_INT()->getText());
             currentStackOffset -= size * 4;
-            decls.push_back({a->ID()->getText(), makeType(base, currentStackOffset, true, size)});
+            decls.push_back({a->ID()->getText(), makeType(base, symbolTable.isGlobalScope(), currentStackOffset, true, size)});
             return decls;
         }
 
@@ -1190,6 +1189,14 @@ public:
                  << "th parameter's name not given in function definition of " << funcName << "\n\n";
             errorCount++;
         }
+    }
+
+    string addressOf(const string& id, TypeInfo& t)
+    {
+        if (t.isGlobal)
+            return "[" + id + "]";
+        string off = (t.stackOffset >= 0 ? "+" + to_string(t.stackOffset) : to_string(t.stackOffset));
+        return "[EBP" + off + "]";
     }
 };
 

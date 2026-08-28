@@ -13,7 +13,8 @@ struct TypeInfo {
     BaseType base = BaseType::UNKNOWN;
     bool isArray = false;
     int arraySize = 0; 
-    int stackOffset = 0;  
+    int stackOffset = 0;
+    bool isGlobal = false;  
 
     bool operator==(const TypeInfo& o) const {
         return base == o.base && isArray == o.isArray;
