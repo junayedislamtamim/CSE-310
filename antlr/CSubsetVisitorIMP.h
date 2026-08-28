@@ -795,6 +795,7 @@ public:
     {
         auto t = std::any_cast<TypeInfo>(visit(ctx->unary_expression()));
 
+        unary(body, labelCounter, ctx->ADDOP()->getText(), "EAX");
         log(ctx->getStart()->getLine(), "unary_expression", "ADDOP unary_expression");
         log2(getExactRuleText(ctx, tokenStream));
 
