@@ -579,6 +579,7 @@ public:
             }
         }
 
+        body << "   " << "MOV EAX, " << getName(id, result) << "\n";
         log(ctx->getStart()->getLine(), "variable", "ID");
         log2(getExactRuleText(ctx, tokenStream));
         return result;
@@ -806,6 +807,7 @@ public:
     {
         auto t = std::any_cast<TypeInfo>(visit(ctx->unary_expression()));
 
+        unary(body, labelCounter, ctx->NOT()->getText(), "EAX");
         log(ctx->getStart()->getLine(), "unary_expression", "NOT unary_expression");
         log2(getExactRuleText(ctx, tokenStream));
 
@@ -826,6 +828,7 @@ public:
     {
         auto t = std::any_cast<TypeInfo>(visit(ctx->variable()));
 
+        //delegate the work to factor
         log(ctx->getStart()->getLine(), "factor", "variable");
         log2(getExactRuleText(ctx, tokenStream));
 
@@ -887,6 +890,7 @@ public:
     {
         auto t = std::any_cast<TypeInfo>(visit(ctx->expression()));
 
+        //do nothing, expression value is already at EAX
         log(ctx->getStart()->getLine(), "factor", "LPAREN expression RPAREN");
         log2(getExactRuleText(ctx, tokenStream));
 
@@ -898,6 +902,7 @@ public:
         log(ctx->getStart()->getLine(), "factor", "CONST_INT");
         log2(getExactRuleText(ctx, tokenStream));
 
+        body << "   " << "MOV EAX, " << ctx->CONST_INT()->getText() << "\n";
         return makeType(BaseType::INT);
     }
 
@@ -906,6 +911,8 @@ public:
         log(ctx->getStart()->getLine(), "factor", "CONST_FLOAT");
         log2(getExactRuleText(ctx, tokenStream));
 
+        //cannot load float directly like this, needs attention
+        body << "   " << "MOV EAX, " << ctx->CONST_FLOAT()->getText() << "\n";
         return makeType(BaseType::FLOAT);
     }
 
@@ -913,6 +920,8 @@ public:
     {
         auto t = std::any_cast<TypeInfo>(visit(ctx->variable()));
 
+        //variable must be in EAX
+        inc(body, ctx->INCOP()->getText());
         log(ctx->getStart()->getLine(), "factor", "variable INCOP");
         log2(getExactRuleText(ctx, tokenStream));
 
@@ -923,6 +932,8 @@ public:
     {
         auto t = std::any_cast<TypeInfo>(visit(ctx->variable()));
 
+        //variable must be in EAX
+        inc(body, ctx->DECOP()->getText());
         log(ctx->getStart()->getLine(), "factor", "variable DECOP");
         log2(getExactRuleText(ctx, tokenStream));
 

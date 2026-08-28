@@ -208,4 +208,15 @@ void unary(stringstream &ss, int &labelCounter, const string &op, const string &
     }
 }
 
+void inc(stringstream& ss, const string& op, const string& op1 = "EAX")
+{
+    if(op1 != "EAX") 
+        ss << spacing << "MOV EAX, " << op1 << "\n";
+
+    if(op == "++")
+        ss << spacing << "INC EAX\n";
+    else if(op == "--")
+        ss << spacing << "DEC EAX\n";
+}
+
 #endif
