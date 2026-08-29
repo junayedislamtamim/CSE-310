@@ -4,9 +4,9 @@
 #include <fstream>
 #include "../SymbolTable/SymbolTable.h"
 
-string spacing = "    ";
+inline string spacing = "    ";
 
-void init(ofstream &out, stringstream &data, stringstream &code)
+inline void init(ofstream &out, stringstream &data, stringstream &code)
 {
     // 1. Declare buffer in the writeable data segment
     data << "    println_buffer rb 12\n"; // Reserve 12 bytes for 10 digits, sign, newline
@@ -81,7 +81,7 @@ void init(ofstream &out, stringstream &data, stringstream &code)
     out << "\n";
 }
 
-void insertData(stringstream &ss, pair<string, TypeInfo> a)
+inline void insertData(stringstream &ss, pair<string, TypeInfo> a)
 {
     int size = 1;
     if (a.second.isArray == true)
@@ -96,7 +96,7 @@ void insertData(stringstream &ss, pair<string, TypeInfo> a)
     }
 }
 
-void beginFunc(stringstream &ss, pair<string, shared_ptr<FunctionInfo>> a, int variableCount)
+inline void beginFunc(stringstream &ss, pair<string, shared_ptr<FunctionInfo>> a, int variableCount)
 {
     // if the function has no params
     if (a.second->paramTypes.size() == 0)
@@ -108,7 +108,7 @@ void beginFunc(stringstream &ss, pair<string, shared_ptr<FunctionInfo>> a, int v
     }
 }
 
-void endFunc(stringstream &ss, pair<string, shared_ptr<FunctionInfo>> a, int variableCount)
+inline void endFunc(stringstream &ss, pair<string, shared_ptr<FunctionInfo>> a, int variableCount)
 {
     // function has no parameters
     if (a.second->paramTypes.size() == 0)
@@ -120,12 +120,12 @@ void endFunc(stringstream &ss, pair<string, shared_ptr<FunctionInfo>> a, int var
     }
 }
 
-void printOP(stringstream &ss, const string &OP, const string &var, const string &log_exp)
+inline void printOP(stringstream &ss, const string &OP, const string &var, const string &log_exp)
 {
     ss << spacing << OP << " " << var << ", " << log_exp << "\n";
 }
 
-void logicAND(stringstream &ss, int &labelCounter, const string &op1, const string &op2)
+inline void logicAND(stringstream &ss, int &labelCounter, const string &op1, const string &op2)
 {
     int id = labelCounter++;
     string falseLabel = ".L_and_false_" + to_string(id);
@@ -148,7 +148,7 @@ void logicAND(stringstream &ss, int &labelCounter, const string &op1, const stri
     ss << endLabel << ":\n";
 }
 
-void logicOR(stringstream &ss, int &labelCounter, const string &op1, const string &op2)
+inline void logicOR(stringstream &ss, int &labelCounter, const string &op1, const string &op2)
 {
     int id = labelCounter++;
     string trueLabel = ".L_or_true_" + to_string(id);
@@ -171,7 +171,7 @@ void logicOR(stringstream &ss, int &labelCounter, const string &op1, const strin
     ss << endLabel << ":\n";
 }
 
-void relOP(stringstream &ss, const string &relop, const string &op1, const string &op2)
+inline void relOP(stringstream &ss, const string &relop, const string &op1, const string &op2)
 {
     ss << spacing << "MOV EDX, " << op1 << "\n";
     ss << spacing << "MOV ECX, " << op2 << "\n";
@@ -194,7 +194,7 @@ void relOP(stringstream &ss, const string &relop, const string &op1, const strin
     ss << "MOVZX EAX, AL\n";
 }
 
-void addOP(stringstream &ss, const string &addOP, const string &op1, const string &op2)
+inline void addOP(stringstream &ss, const string &addOP, const string &op1, const string &op2)
 {
     ss << spacing << "MOV EDX, " << op1 << "\n";
     ss << spacing << "MOV ECX, " << op2 << "\n";
@@ -210,7 +210,7 @@ void addOP(stringstream &ss, const string &addOP, const string &op1, const strin
 }
 
 // always gets called like EBX MULOP EAX, the result is in EAX
-void mulOP(stringstream &ss, const string &mulOP)
+inline void mulOP(stringstream &ss, const string &mulOP)
 {
     ss << spacing << "XCHG EAX, EBX\n";
 
@@ -231,7 +231,7 @@ void mulOP(stringstream &ss, const string &mulOP)
     }
 }
 
-void unary(stringstream &ss, int &labelCounter, const string &op, const string &op1)
+inline void unary(stringstream &ss, int &labelCounter, const string &op, const string &op1)
 {
     if (op1 != "EAX")
         ss << spacing << "MOV EAX, " << op1 << "\n";
@@ -262,7 +262,7 @@ void unary(stringstream &ss, int &labelCounter, const string &op, const string &
     }
 }
 
-void inc(stringstream& ss, const string& op, const string& op1 = "EAX")
+inline void inc(stringstream& ss, const string& op, const string& op1 = "EAX")
 {
     if(op1 != "EAX") 
         ss << spacing << "MOV EAX, " << op1 << "\n";
