@@ -536,7 +536,7 @@ public:
     {
         auto temp = visitChildren(ctx);
 
-        body << "   " << "JMP " << currentFunctionName << "_exit\n";
+        body << "    " << "JMP " << currentFunctionName << "_exit\n";
         log(ctx->getStart()->getLine(), "statement", "RETURN expression SEMICOLON");
         log2(getExactRuleText(ctx, tokenStream));
 
@@ -590,7 +590,7 @@ public:
             }
         }
 
-        body << "   " << "MOV EAX, " << getName(id, result) << "\n";
+        body << "    " << "MOV EAX, " << getName(id, result) << "\n";
         log(ctx->getStart()->getLine(), "variable", "ID");
         log2(getExactRuleText(ctx, tokenStream));
         return result;
@@ -693,9 +693,9 @@ public:
     virtual std::any visitLogic_expression_two(CSubsetParser::Logic_expression_twoContext *ctx) override
     {
         visit(ctx->rel_expression(0));
-        body << "   PUSH EAX\n"; 
+        body << "    PUSH EAX\n"; 
         visit(ctx->rel_expression(1));
-        body << "   POP EBX\n";
+        body << "    POP EBX\n";
 
         if(ctx->LOGICOP()->getText() == "&&")
             logicAND(body, labelCounter, "EBX", "EAX");
@@ -721,9 +721,9 @@ public:
     virtual std::any visitRel_expression_two(CSubsetParser::Rel_expression_twoContext *ctx) override
     {
         visit(ctx->simple_expression(0));
-        body << "   PUSH EAX\n"; 
+        body << "    PUSH EAX\n"; 
         visit(ctx->simple_expression(1));
-        body << "   POP EBX\n";
+        body << "    POP EBX\n";
 
         relOP(body, ctx->RELOP()->getText(), "EBX", "EAX");
 
@@ -736,9 +736,9 @@ public:
     virtual std::any visitSimple_expression_two(CSubsetParser::Simple_expression_twoContext *ctx) override
     {
         auto lhs = std::any_cast<TypeInfo>(visit(ctx->simple_expression()));
-        body << "   PUSH EAX\n"; 
+        body << "    PUSH EAX\n"; 
         auto rhs = std::any_cast<TypeInfo>(visit(ctx->term()));
-        body << "   POP EBX\n";
+        body << "    POP EBX\n";
 
         log(ctx->getStart()->getLine(), "simple_expression", "simple_expression ADDOP term");
         log2(getExactRuleText(ctx, tokenStream));
@@ -774,9 +774,9 @@ public:
     virtual std::any visitTerm_two(CSubsetParser::Term_twoContext *ctx) override
     {
         auto lhs = std::any_cast<TypeInfo>(visit(ctx->term()));
-        body << "   PUSH EAX\n"; 
+        body << "    PUSH EAX\n"; 
         auto rhs = std::any_cast<TypeInfo>(visit(ctx->unary_expression()));
-        body << "   POP EBX\n";
+        body << "    POP EBX\n";
         string op = ctx->MULOP()->getText();
 
         if (op == "%" && (lhs.base != BaseType::INT || rhs.base != BaseType::INT))
@@ -913,7 +913,7 @@ public:
         log(ctx->getStart()->getLine(), "factor", "CONST_INT");
         log2(getExactRuleText(ctx, tokenStream));
 
-        body << "   " << "MOV EAX, " << ctx->CONST_INT()->getText() << "\n";
+        body << "    " << "MOV EAX, " << ctx->CONST_INT()->getText() << "\n";
         return makeType(BaseType::INT);
     }
 
@@ -929,7 +929,7 @@ public:
         */
 
         int truncated = static_cast<int>(stod(ctx->CONST_FLOAT()->getText()));
-        body << "   " << "MOV EAX, " << truncated << "\n";
+        body << "    " << "MOV EAX, " << truncated << "\n";
         return makeType(BaseType::FLOAT);
     }
 
@@ -945,7 +945,7 @@ public:
         
         //variable must be in EAX
         inc(body, ctx->INCOP()->getText());
-        body << "   " << "MOV " << getName(id, t) << ", EAX\n";
+        body << "    " << "MOV " << getName(id, t) << ", EAX\n";
         log(ctx->getStart()->getLine(), "factor", "variable INCOP");
         log2(getExactRuleText(ctx, tokenStream));
 
@@ -964,7 +964,7 @@ public:
         
         //variable must be in EAX
         inc(body, ctx->DECOP()->getText());
-        body << "   " << "MOV " << getName(id, t) << ", EAX\n";
+        body << "    " << "MOV " << getName(id, t) << ", EAX\n";
         log(ctx->getStart()->getLine(), "factor", "variable DECOP");
         log2(getExactRuleText(ctx, tokenStream));
 

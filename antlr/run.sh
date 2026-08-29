@@ -13,11 +13,11 @@ INPUT_FILE="$2"
 antlr4 -v 4.13.2 -Dlanguage=Cpp -visitor -no-listener "$GRAMMAR_FILE"
 
 # 2. Compile all .cpp files
-g++ -std=c++17 -w -I/usr/local/include/antlr4-runtime *.cpp -L/usr/local/lib/ -lantlr4-runtime -pthread -o compiler.out
+g++ -std=c++17 -w -I/usr/local/include/antlr4-runtime *.cpp -L/usr/local/lib64/ -lantlr4-runtime -pthread -o compiler.out
 
 # 3. Run the compiled executable with optional input file
 if [ -n "$INPUT_FILE" ]; then
-    LD_LIBRARY_PATH=/usr/local/lib ./compiler.out "$INPUT_FILE"
+    LD_LIBRARY_PATH=/usr/local/lib64 ./compiler.out "$INPUT_FILE"
 else
-    LD_LIBRARY_PATH=/usr/local/lib ./compiler.out
+    LD_LIBRARY_PATH=/usr/local/lib64 ./compiler.out
 fi
