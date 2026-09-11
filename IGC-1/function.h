@@ -71,13 +71,15 @@ inline void init(ofstream &out, stringstream &data, stringstream &code)
 
     // --- Main Program Entry ---
     out << "main:\n";
-    out << code.str();
-    out << "\n";
+    out << "    CALL main_\n";
 
     // Exit program (sys_exit)
     out << "    MOV EAX, 1\n";
     out << "    XOR EBX, EBX\n";
     out << "    INT 0x80\n";
+    out << "\n";
+
+    out << code.str();
     out << "\n";
 }
 
@@ -98,7 +100,6 @@ inline void insertData(stringstream &ss, pair<string, TypeInfo> a)
 
 inline void beginFunc(stringstream &ss, pair<string, shared_ptr<FunctionInfo>> a, int variableCount)
 {
-    
     ss << a.first << "_:\n"; // print the label
     ss << "    " << "PUSH " << "EBP\n";
     ss << spacing << "MOV EBP, ESP\n";
