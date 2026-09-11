@@ -98,26 +98,21 @@ inline void insertData(stringstream &ss, pair<string, TypeInfo> a)
 
 inline void beginFunc(stringstream &ss, pair<string, shared_ptr<FunctionInfo>> a, int variableCount)
 {
-    // if the function has no params
-    if (a.second->paramTypes.size() == 0)
-    {
-        ss << a.first << "_:\n"; // print the label
-        ss << "    " << "PUSH " << "EBP\n";
-        ss << spacing << "MOV EBP, ESP\n";
+    
+    ss << a.first << "_:\n"; // print the label
+    ss << "    " << "PUSH " << "EBP\n";
+    ss << spacing << "MOV EBP, ESP\n";
+    if (variableCount > 0)
         ss << spacing << "SUB ESP, " << variableCount * 4 << "\n";
-    }
 }
 
 inline void endFunc(stringstream &ss, pair<string, shared_ptr<FunctionInfo>> a, int variableCount)
 {
-    // function has no parameters
-    if (a.second->paramTypes.size() == 0)
-    {
-        ss << a.first << "_exit:\n";
+    ss << a.first << "_exit:\n";
+    if (variableCount > 0)
         ss << spacing << "ADD ESP, " << variableCount * 4 << "\n"; // INT and FLOAT both are 4 bytes
-        ss << "    POP EBP\n";
-        ss << "    RET\n";
-    }
+    ss << "    POP EBP\n";
+    ss << "    RET\n";
 }
 
 inline void printOP(stringstream &ss, const string &OP, const string &var, const string &log_exp)

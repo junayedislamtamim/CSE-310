@@ -22,6 +22,7 @@ class CSubsetVisitorIMP : public CSubsetVisitor
     antlr4::CommonTokenStream *tokenStream;
     int errorCount = 0;
     int currentStackOffset = 0;
+    int currentParamOffset = 8; // params live at [EBP+8], [EBP+12], ... above saved EBP/return addr
     string currentFunctionName = "";
     int labelCounter = 0;
 
@@ -131,15 +132,17 @@ public:
         }
 
         currentStackOffset = 0;
+        currentParamOffset = 8 + 4 * ((int)paramTypes.size() - 1);
         string previous = currentFunctionName;
         currentFunctionName = funcName;
         symbolTable.enterScope();
 
         auto temp = visitChildren(ctx);
 
-        beginFunc(code, {funcName, make_shared<FunctionInfo>(returnType, paramTypes, true)}, symbolTable.getVariableCount());
+        int localVarCount = (-currentStackOffset) / 4; // arrays count for their full size here, unlike a raw symbol count
+        beginFunc(code, {funcName, make_shared<FunctionInfo>(returnType, paramTypes, true)}, localVarCount);
         code << body.str();
-        endFunc(code, {funcName, make_shared<FunctionInfo>(returnType, paramTypes, true)}, symbolTable.getVariableCount());
+        endFunc(code, {funcName, make_shared<FunctionInfo>(returnType, paramTypes, true)}, localVarCount);
 
         body.str("");
         body.clear();
@@ -238,12 +241,13 @@ public:
         string type = "ID";
         string ID = ctx->ID()->getText();
 
-        if (!symbolTable.insertSymbol(ID, type, makeType(getType(ctx->type_specifier()->getText()), false, 0)))
+        if (!symbolTable.insertSymbol(ID, type, makeType(getType(ctx->type_specifier()->getText()), false, currentParamOffset)))
         {
             errF << "Error at line " << ctx->getStart()->getLine()
                  << ": Multiple declaration of " << ID << " in parameter\n\n";
             errorCount++;
         }
+        currentParamOffset -= 4;
 
         log(ctx->getStart()->getLine(), "parameter_list", "type_specifier ID");
         log2(getExactRuleText(ctx, tokenStream));
@@ -268,12 +272,13 @@ public:
         string type = "ID";
         string ID = ctx->ID()->getText();
 
-        if (!symbolTable.insertSymbol(ID, type, makeType(getType(ctx->type_specifier()->getText()), false, 0)))
+        if (!symbolTable.insertSymbol(ID, type, makeType(getType(ctx->type_specifier()->getText()), false, currentParamOffset)))
         {
             errF << "Error at line " << ctx->getStart()->getLine()
                  << ": Multiple declaration of " << ID << " in parameter\n\n";
             errorCount++;
         }
+        currentParamOffset -= 4;
 
         log(ctx->getStart()->getLine(), "parameter_list", "parameter_list COMMA type_specifier ID");
         log2(getExactRuleText(ctx, tokenStream));
@@ -469,42 +474,82 @@ public:
 
     virtual std::any visitStatement_four(CSubsetParser::Statement_fourContext *ctx) override
     {
-        auto temp = visitChildren(ctx);
+        int id = labelCounter++;
+        string startLabel = ".L_for_start_" + to_string(id);
+        string endLabel = ".L_for_end_" + to_string(id);
+
+        visit(ctx->expression_statement(0)); // init
+        body << startLabel << ":\n";
+        visit(ctx->expression_statement(1)); // condition -> EAX (0/1)
+        body << spacing << "CMP EAX, 0\n";
+        body << spacing << "JE " << endLabel << "\n";
+        visit(ctx->statement());
+        visit(ctx->expression()); // update
+        body << spacing << "JMP " << startLabel << "\n";
+        body << endLabel << ":\n";
 
         log(ctx->getStart()->getLine(), "statement", "FOR LPAREN expression_statement expression_statement expression RPAREN statement");
         log2(getExactRuleText(ctx, tokenStream));
 
-        return temp;
+        return 0;
     }
 
     virtual std::any visitStatement_five(CSubsetParser::Statement_fiveContext *ctx) override
     {
-        auto temp = visitChildren(ctx);
+        int id = labelCounter++;
+        string endLabel = ".L_if_end_" + to_string(id);
+
+        visit(ctx->expression());
+        body << spacing << "CMP EAX, 0\n";
+        body << spacing << "JE " << endLabel << "\n";
+        visit(ctx->statement());
+        body << endLabel << ":\n";
 
         log(ctx->getStart()->getLine(), "statement", "IF LPAREN expression RPAREN statement");
         log2(getExactRuleText(ctx, tokenStream));
 
-        return temp;
+        return 0;
     }
 
     virtual std::any visitStatement_six(CSubsetParser::Statement_sixContext *ctx) override
     {
-        auto temp = visitChildren(ctx);
+        int id = labelCounter++;
+        string elseLabel = ".L_else_" + to_string(id);
+        string endLabel = ".L_if_end_" + to_string(id);
+
+        visit(ctx->expression());
+        body << spacing << "CMP EAX, 0\n";
+        body << spacing << "JE " << elseLabel << "\n";
+        visit(ctx->statement(0));
+        body << spacing << "JMP " << endLabel << "\n";
+        body << elseLabel << ":\n";
+        visit(ctx->statement(1));
+        body << endLabel << ":\n";
 
         log(ctx->getStart()->getLine(), "statement", "IF LPAREN expression RPAREN statement ELSE statement");
         log2(getExactRuleText(ctx, tokenStream));
 
-        return temp;
+        return 0;
     }
 
     virtual std::any visitStatement_seven(CSubsetParser::Statement_sevenContext *ctx) override
     {
-        auto temp = visitChildren(ctx);
+        int id = labelCounter++;
+        string startLabel = ".L_while_start_" + to_string(id);
+        string endLabel = ".L_while_end_" + to_string(id);
+
+        body << startLabel << ":\n";
+        visit(ctx->expression());
+        body << spacing << "CMP EAX, 0\n";
+        body << spacing << "JE " << endLabel << "\n";
+        visit(ctx->statement());
+        body << spacing << "JMP " << startLabel << "\n";
+        body << endLabel << ":\n";
 
         log(ctx->getStart()->getLine(), "statement", "WHILE LPAREN expression RPAREN statement");
         log2(getExactRuleText(ctx, tokenStream));
 
-        return temp;
+        return 0;
     }
 
     virtual std::any visitStatement_eight(CSubsetParser::Statement_eightContext *ctx) override
@@ -630,6 +675,10 @@ public:
                 errorCount++;
             }
             result = makeType(varType.base, false, 0);
+
+            // index value is currently in EAX (from visiting ctx->expression() above)
+            body << spacing << "MOV EBX, EAX\n";
+            body << spacing << "MOV EAX, " << getIndexedName(id, varType, "EBX") << "\n";
         }
 
         log(ctx->getStart()->getLine(), "variable", "ID LTHIRD expression RTHIRD");
@@ -649,8 +698,81 @@ public:
 
     virtual std::any visitExpression_two(CSubsetParser::Expression_twoContext *ctx) override
     {
-        auto lhs = std::any_cast<TypeInfo>(visit(ctx->variable()));
-        auto rhs = std::any_cast<TypeInfo>(visit(ctx->logic_expression()));
+        auto varCtx = ctx->variable();
+        TypeInfo lhs{BaseType::UNKNOWN, false, 0};
+        TypeInfo rhs{BaseType::UNKNOWN, false, 0};
+        bool isArrayTarget = false;
+        string scalarOperand;
+        string arrId;
+        TypeInfo arrType; // the array's own TypeInfo (base/offset), for addressing
+
+        if (auto v1 = dynamic_cast<CSubsetParser::Variable_oneContext *>(varCtx))
+        {
+            string id = v1->ID()->getText();
+            SymbolInfo *sym = symbolTable.lookUp(id);
+
+            if (!sym)
+            {
+                errF << "Error at line " << ctx->getStart()->getLine() << ": Undeclared variable " << id << "\n\n";
+                errorCount++;
+            }
+            else if (sym->isFunction())
+            {
+                errF << "Error at line " << ctx->getStart()->getLine() << ": " << id << " is a function, used as variable\n\n";
+                errorCount++;
+            }
+            else
+            {
+                lhs = sym->getVarType();
+                if (lhs.isArray)
+                {
+                    errF << "Error at line " << ctx->getStart()->getLine() << ": Type mismatch, " << id << " is an array\n\n";
+                    errorCount++;
+                }
+            }
+            scalarOperand = getName(id, lhs);
+
+            rhs = std::any_cast<TypeInfo>(visit(ctx->logic_expression()));
+        }
+        else if (auto v2 = dynamic_cast<CSubsetParser::Variable_twoContext *>(varCtx))
+        {
+            isArrayTarget = true;
+            arrId = v2->ID()->getText();
+            SymbolInfo *sym = symbolTable.lookUp(arrId);
+
+            auto indexType = std::any_cast<TypeInfo>(visit(v2->expression())); // index -> EAX
+            if (indexType.base != BaseType::UNKNOWN && indexType.base != BaseType::INT)
+            {
+                errF << "Error at line " << ctx->getStart()->getLine()
+                     << ": Expression inside third brackets not an integer\n\n";
+                errorCount++;
+            }
+            body << spacing << "PUSH EAX\n"; // save index across RHS evaluation
+
+            if (!sym)
+            {
+                errF << "Error at line " << ctx->getStart()->getLine() << ": Undeclared variable " << arrId << "\n\n";
+                errorCount++;
+            }
+            else if (sym->isFunction())
+            {
+                errF << "Error at line " << ctx->getStart()->getLine() << ": " << arrId << " is a function, used as variable\n\n";
+                errorCount++;
+            }
+            else
+            {
+                arrType = sym->getVarType();
+                if (!arrType.isArray)
+                {
+                    errF << "Error at line " << ctx->getStart()->getLine() << ": " << arrId << " is not an array\n\n";
+                    errorCount++;
+                }
+                lhs = makeType(arrType.base, false, 0);
+            }
+
+            rhs = std::any_cast<TypeInfo>(visit(ctx->logic_expression()));
+            body << spacing << "POP EBX\n"; // restore index into EBX
+        }
 
         if (lhs.base == BaseType::VOID || rhs.base == BaseType::VOID)
         {
@@ -675,7 +797,10 @@ public:
         log(ctx->getStart()->getLine(), "expression", "variable ASSIGNOP logic_expression");
         log2(getExactRuleText(ctx, tokenStream));
 
-        printOP(body, "MOV", getName(ctx->variable()->getText(), lhs), "EAX" );
+        if (isArrayTarget)
+            body << spacing << "MOV " << getIndexedName(arrId, arrType, "EBX") << ", EAX\n";
+        else
+            body << spacing << "MOV " << scalarOperand << ", EAX\n";
 
         return lhs;
     }
@@ -891,6 +1016,11 @@ public:
             }
         }
 
+        // arguments (if any) are already pushed onto the stack by visit(ctx->argument_list()) above
+        body << spacing << "CALL " << id << "_\n";
+        if (!argTypes.empty())
+            body << spacing << "ADD ESP, " << (argTypes.size() * 4) << "\n"; // caller cleans up (cdecl-style)
+
         log(ctx->getStart()->getLine(), "factor", "ID LPAREN argument_list RPAREN");
         log2(getExactRuleText(ctx, tokenStream));
 
@@ -937,15 +1067,26 @@ public:
     {
         auto t = std::any_cast<TypeInfo>(visit(ctx->variable()));
 
-        string id;
-
-        auto p = dynamic_cast<CSubsetParser::Variable_oneContext*>(ctx->variable());
-        if(p != nullptr)
-            id = p->ID()->getText();
-        
         //variable must be in EAX
         inc(body, ctx->INCOP()->getText());
-        body << "    " << "MOV " << getName(id, t) << ", EAX\n";
+
+        if (auto p = dynamic_cast<CSubsetParser::Variable_oneContext*>(ctx->variable()))
+        {
+            string id = p->ID()->getText();
+            body << "    " << "MOV " << getName(id, t) << ", EAX\n";
+        }
+        else if (auto p2 = dynamic_cast<CSubsetParser::Variable_twoContext*>(ctx->variable()))
+        {
+            // EBX still holds the index computed inside visitVariable_two's load
+            string id = p2->ID()->getText();
+            SymbolInfo *sym = symbolTable.lookUp(id);
+            if (sym && !sym->isFunction())
+            {
+                TypeInfo arrType = sym->getVarType();
+                body << "    " << "MOV " << getIndexedName(id, arrType, "EBX") << ", EAX\n";
+            }
+        }
+
         log(ctx->getStart()->getLine(), "factor", "variable INCOP");
         log2(getExactRuleText(ctx, tokenStream));
 
@@ -956,15 +1097,25 @@ public:
     {
         auto t = std::any_cast<TypeInfo>(visit(ctx->variable()));
 
-        string id;
-
-        auto p = dynamic_cast<CSubsetParser::Variable_oneContext*>(ctx->variable());
-        if(p != nullptr)
-            id = p->ID()->getText();
-        
         //variable must be in EAX
         inc(body, ctx->DECOP()->getText());
-        body << "    " << "MOV " << getName(id, t) << ", EAX\n";
+
+        if (auto p = dynamic_cast<CSubsetParser::Variable_oneContext*>(ctx->variable()))
+        {
+            string id = p->ID()->getText();
+            body << "    " << "MOV " << getName(id, t) << ", EAX\n";
+        }
+        else if (auto p2 = dynamic_cast<CSubsetParser::Variable_twoContext*>(ctx->variable()))
+        {
+            string id = p2->ID()->getText();
+            SymbolInfo *sym = symbolTable.lookUp(id);
+            if (sym && !sym->isFunction())
+            {
+                TypeInfo arrType = sym->getVarType();
+                body << "    " << "MOV " << getIndexedName(id, arrType, "EBX") << ", EAX\n";
+            }
+        }
+
         log(ctx->getStart()->getLine(), "factor", "variable DECOP");
         log2(getExactRuleText(ctx, tokenStream));
 
@@ -992,6 +1143,7 @@ public:
     {
         auto types = std::any_cast<vector<TypeInfo>>(visit(ctx->arguments()));
         auto t = std::any_cast<TypeInfo>(visit(ctx->logic_expression()));
+        body << spacing << "PUSH EAX\n";
         types.push_back(t);
 
         log(ctx->getStart()->getLine(), "arguments", "arguments COMMA logic_expression");
@@ -1003,6 +1155,7 @@ public:
     virtual std::any visitArguments_one(CSubsetParser::Arguments_oneContext *ctx) override
     {
         auto t = std::any_cast<TypeInfo>(visit(ctx->logic_expression()));
+        body << spacing << "PUSH EAX\n";
 
         log(ctx->getStart()->getLine(), "arguments", "logic_expression");
         log2(getExactRuleText(ctx, tokenStream));
@@ -1262,6 +1415,23 @@ public:
             return "DWORD [" + id + "]";
         string off = (t.stackOffset >= 0 ? "+" + to_string(t.stackOffset) : to_string(t.stackOffset));
         return "DWORD [EBP" + off + "]";
+    }
+
+    // Base address (no brackets) for an array variable, e.g. "arr" (global) or "EBP-20" (local).
+    string getBase(const string& id, TypeInfo& t)
+    {
+        if (t.isGlobal)
+            return id;
+        string off = (t.stackOffset >= 0 ? "+" + to_string(t.stackOffset) : to_string(t.stackOffset));
+        return "EBP" + off;
+    }
+
+    // Full indexed memory operand for an array element, e.g. "DWORD [arr+EBX*4]" or "DWORD [EBP-20+EBX*4]".
+    // 't' must be the array's own TypeInfo (isGlobal/stackOffset of the array itself, not the element).
+    // 'indexReg' must already hold the (0-based) element index.
+    string getIndexedName(const string& id, TypeInfo& t, const string& indexReg)
+    {
+        return "DWORD [" + getBase(id, t) + "+" + indexReg + "*4]";
     }
 };
 
